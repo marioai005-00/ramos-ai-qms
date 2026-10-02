@@ -39,6 +39,7 @@
   .top-header { height:auto !important; min-height:58px !important; flex-wrap:wrap !important; gap:8px !important; padding:10px 14px !important; overflow:visible !important; }
   .header-case-zone, .header-actions { flex-wrap:wrap !important; min-width:0 !important; overflow:visible !important; gap:7px !important; }
   .header-actions { margin-left:auto; }
+  .header-actions .user-switcher-shell { flex:0 0 auto !important; max-width:none !important; }
   .case-selector { flex:1 1 240px !important; max-width:340px !important; min-width:160px !important; }
   .header-control-label, .header-stage-state, .header-action-button, .user-selector-select, .case-selector select { font-size:12px !important; }
   .notif-badge-count { background:#b91c1c !important; font-size:12px !important; min-width:20px !important; height:20px !important; }
@@ -57,7 +58,7 @@
   .org-user-card { align-items:flex-start; }
   .org-user-card :is(div,span) { min-width:0; }
   .org-user-card [style*="text-overflow"], .org-user-card [style*="white-space"] { white-space:normal !important; overflow:visible !important; text-overflow:clip !important; overflow-wrap:anywhere; }
-  .org-avatar { min-width:24px !important; white-space:nowrap; line-height:1; box-sizing:content-box; }
+  .org-avatar { min-width:24px !important; white-space:nowrap; line-height:1; box-sizing:border-box; }
   .tree-row { flex-wrap:wrap; }
   #modalContainer { min-width:0; padding:20px !important; }
   #modalContainer .modal-content { width:100% !important; padding:0 !important; max-width:100% !important; min-width:0; }
