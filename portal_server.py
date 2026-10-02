@@ -31,6 +31,7 @@ from agent_runtime import AgentRuntime
 from qms_backend import QMSApiError, QMSStore
 import action_advisor
 import validation_advisor
+import prevention_advisor
 import validation_stats
 import tool_advisor
 
@@ -484,6 +485,36 @@ def d6_statistics(identity, params: dict) -> dict:
     raise QMSApiError(400, "계산 종류를 지정하세요.", code="INVALID_STATISTICS")
 
 
+def _d7_result(engine: str, case: dict, revision: int, provider: dict, body: dict) -> dict:
+    return {"caseId": case["id"], "engine": engine, "provider": provider.get("engine"), "model": provider.get("model"),
+            "generatedAt": prevention_advisor.now(), "caseRevision": revision, **body}
+
+
+def advise_d7_system(identity, params: dict) -> dict:
+    """Documents to revise, a PFMEA row draft per confirmed cause and who to inform."""
+    case, revision = QMS_STORE.d7_system_context(identity, params)
+    provider, advice = ask_ai_for_advice(prevention_advisor.build_system_prompt(case), prevention_advisor.SYSTEM_PROMPT,
+                                         lambda text: prevention_advisor.parse_system(text, case))
+    QMS_STORE.record_d7_ai(identity, "D7_SYSTEM_ADVICE_GENERATED", case["id"], revision, provider, {"documents": len(advice["documents"]), "pfmea": len(advice["pfmea"])})
+    return _d7_result(prevention_advisor.SYSTEM_ENGINE, case, revision, provider, advice)
+
+
+def advise_d7_deployment(identity, params: dict) -> dict:
+    """Risk of the same failure for each recorded candidate. Without candidates the AI is not called."""
+    case, revision, candidates = QMS_STORE.d7_deploy_context(identity, params)
+    provider, advice = ask_ai_for_advice(prevention_advisor.build_deploy_prompt(case, candidates), prevention_advisor.DEPLOY_PROMPT,
+                                         lambda text: prevention_advisor.parse_deploy(text, case, candidates))
+    QMS_STORE.record_d7_ai(identity, "D7_DEPLOYMENT_ADVICE_GENERATED", case["id"], revision, provider, {"candidates": len(candidates), "assessed": len(advice["assessments"])})
+    return _d7_result(prevention_advisor.DEPLOY_ENGINE, case, revision, provider, {**advice, "candidateCount": len(candidates)})
+
+
+def advise_d7_lessons(identity, params: dict) -> dict:
+    case, revision = QMS_STORE.d7_lessons_context(identity, params)
+    provider, lessons = ask_ai_for_advice(prevention_advisor.build_lessons_prompt(case), prevention_advisor.LESSONS_PROMPT, prevention_advisor.parse_lessons)
+    QMS_STORE.record_d7_ai(identity, "D7_LESSONS_GENERATED", case["id"], revision, provider, {})
+    return _d7_result(prevention_advisor.LESSONS_ENGINE, case, revision, provider, lessons)
+
+
 class PortalHandler(SimpleHTTPRequestHandler):
     def _send_json(self, status: int, value: object, *, cookies: list[str] | None = None) -> None:
         body = json.dumps(value, ensure_ascii=False).encode("utf-8")
@@ -732,7 +763,7 @@ class PortalHandler(SimpleHTTPRequestHandler):
         qms_paths = {
             "/__api__/auth/login", "/__api__/auth/logout", "/__api__/auth/change-password",
             "/__api__/qms/supplier-notices", "/__api__/qms/supplier-tickets", "/__api__/qms/assembly-defects", "/__api__/qms/internal-quality", "/__api__/qms/state", "/__api__/qms/stage-version", "/__api__/qms/approval",
-            "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/ai/stage-draft", "/__api__/qms/ai/d4-tool-advice", "/__api__/qms/ai/d5-action-advice", "/__api__/qms/ai/d6-test-plan", "/__api__/qms/ai/d6-read-report", "/__api__/qms/d6/statistics", "/__api__/qms/d6/checks", "/__api__/qms/records/delete", "/__api__/qms/mail/test", "/__api__/qms/escalations/evaluate",
+            "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/ai/stage-draft", "/__api__/qms/ai/d4-tool-advice", "/__api__/qms/ai/d5-action-advice", "/__api__/qms/ai/d6-test-plan", "/__api__/qms/ai/d6-read-report", "/__api__/qms/d6/statistics", "/__api__/qms/d6/checks", "/__api__/qms/ai/d7-system-advice", "/__api__/qms/ai/d7-deployment-advice", "/__api__/qms/ai/d7-lessons", "/__api__/qms/d7/checks", "/__api__/qms/records/delete", "/__api__/qms/mail/test", "/__api__/qms/escalations/evaluate",
             "/__api__/qms/agent-runs", "/__api__/qms/scheduler/evaluate",
         }
         if clean_path not in qms_paths and not agent_run_action and not case_source_action and not finding_action and not evidence_upload and not internal_update and not notice_update and not ticket_update and not assembly_update:
@@ -826,6 +857,14 @@ class PortalHandler(SimpleHTTPRequestHandler):
             self._send_json(200, {"success": True, **QMS_STORE.send_test_mail(identity)})
         elif clean_path == "/__api__/qms/records/delete":
             self._send_json(200, {"success": True, **QMS_STORE.delete_record(identity, params)})
+        elif clean_path == "/__api__/qms/ai/d7-system-advice":
+            self._send_json(200, {"success": True, "advice": advise_d7_system(identity, params)})
+        elif clean_path == "/__api__/qms/ai/d7-deployment-advice":
+            self._send_json(200, {"success": True, "advice": advise_d7_deployment(identity, params)})
+        elif clean_path == "/__api__/qms/ai/d7-lessons":
+            self._send_json(200, {"success": True, "lessons": advise_d7_lessons(identity, params)})
+        elif clean_path == "/__api__/qms/d7/checks":
+            self._send_json(200, {"success": True, **QMS_STORE.d7_checks(identity, params)})
         elif clean_path == "/__api__/qms/ai/d6-test-plan":
             self._send_json(200, {"success": True, "plan": plan_d6_tests(identity, params)})
         elif clean_path == "/__api__/qms/ai/d6-read-report":

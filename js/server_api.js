@@ -102,7 +102,9 @@
       cases: Array.isArray(source?.cases) ? source.cases : [],
       intakeQueue: Array.isArray(source?.intakeQueue) ? source.intakeQueue : [],
       // Report templates are shared by everyone who reads D6 test reports.
-      reportTemplates: Array.isArray(source?.reportTemplates) ? source.reportTemplates : []
+      reportTemplates: Array.isArray(source?.reportTemplates) ? source.reportTemplates : [],
+      // The product list D7 horizontal deployment draws its candidates from.
+      productCatalog: Array.isArray(source?.productCatalog) ? source.productCatalog : []
     };
   }
 
@@ -247,6 +249,22 @@
     return result;
   }
 
+  async function d7SystemAdvice(caseId) {
+    return (await request('/__api__/qms/ai/d7-system-advice', { method: 'POST', body: { caseId } })).advice;
+  }
+
+  async function d7DeploymentAdvice(caseId) {
+    return (await request('/__api__/qms/ai/d7-deployment-advice', { method: 'POST', body: { caseId } })).advice;
+  }
+
+  async function d7Lessons(caseId) {
+    return (await request('/__api__/qms/ai/d7-lessons', { method: 'POST', body: { caseId } })).lessons;
+  }
+
+  async function d7Checks(caseId) {
+    return await request('/__api__/qms/d7/checks', { method: 'POST', body: { caseId } });
+  }
+
   async function d6TestPlan(caseId) {
     return (await request('/__api__/qms/ai/d6-test-plan', { method: 'POST', body: { caseId } })).plan;
   }
@@ -382,6 +400,10 @@
     d6ReadReport,
     d6Statistics,
     d6Checks,
+    d7SystemAdvice,
+    d7DeploymentAdvice,
+    d7Lessons,
+    d7Checks,
     supplierSummary,
     downloadCaseReport,
     evaluateEscalations,

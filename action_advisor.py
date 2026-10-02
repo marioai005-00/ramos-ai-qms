@@ -30,7 +30,7 @@ SYSTEM_PROMPT = """당신은 반도체 메모리(eMMC·DRAM) 제조사의 품질
 2. 대책이 효과가 있다고 단정하지 않습니다. 효과는 사람이 D6에서 시험으로 확인합니다.
 3. 담당자, 날짜, 비용 금액, 시료 수, 측정값을 만들어 내지 않습니다.
 4. 대책마다 강도를 정직하게 분류합니다. 작업자 교육·주의 문구·표준서 개정만으로 된 대책은 administrative입니다.
-5. 모든 설명은 한국어로, 항목당 한두 문장으로 짧게 씁니다. 설명 문장 안에 영문 코드값을 쓰지 않습니다.
+5. 모든 설명은 한국어로, 항목당 한두 문장으로 짧게 씁니다. 설명 문장 안에 시스템 코드값(id나 선택지 영문 값)을 쓰지 않고 한글 이름을 씁니다. SMT·BGA·PFMEA 같은 업계 약어는 그대로 씁니다.
 6. JSON 객체 하나만 출력합니다. 설명 문장이나 코드 블록 표시를 붙이지 않습니다.
 
 회사 기본 사실(시스템에 등록된 내용):
@@ -63,7 +63,8 @@ def case_brief(case: dict, similar: list[dict]) -> dict:
         "D4 분석 결과": [{"도구": _text(t.get("id")), "결과": _text(t.get("finding"), 400)} for t in _rows(d4.get("selectedTools")) if t.get("verified") is True and _text(t.get("finding"))][:10],
         "이미 등록된 D5 대책": [_text(r.get("title")) for r in _rows(d5.get("candidates")) if _text(r.get("title"))][:20],
         "유사 종결 Case의 선정 대책": [{"Case": _text(item.get("caseId")), "현상": _text(item.get("claimTitle")),
-                                  "대책": [_text(r.get("title")) for r in _rows(item.get("countermeasures")) if r.get("selected") is True][:3]}
+                                  "대책": [_text(r.get("title")) for r in _rows(item.get("countermeasures")) if r.get("selected") is True][:3],
+                                  "교훈": _text(_dict(item.get("lessonsLearned")).get("lesson"), 300)}
                                  for item in similar][:3],
     }
     return {key: value for key, value in brief.items() if value not in ("", [], {}, None)}

@@ -109,9 +109,10 @@ from stage_drafts import StageDraftMixin
 from tool_advisor import ToolAdvisorMixin
 from action_advisor import ActionAdvisorMixin
 from validation_advisor import ValidationAdvisorMixin
+from prevention_advisor import PreventionAdvisorMixin
 
 
-class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin, SupplierSummaryMixin, AssemblyDefectsMixin, StageDraftMixin, ToolAdvisorMixin, ActionAdvisorMixin, ValidationAdvisorMixin, ReportExportMixin, MailerMixin):
+class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin, SupplierSummaryMixin, AssemblyDefectsMixin, StageDraftMixin, ToolAdvisorMixin, ActionAdvisorMixin, ValidationAdvisorMixin, PreventionAdvisorMixin, ReportExportMixin, MailerMixin):
     """Thread-safe SQLite store used by the local portal server."""
 
     def __init__(self, project_root: Path):
@@ -846,6 +847,7 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
                 "rootCauses": candidate.get("d4", {}).get("rootCauses", {}),
                 "countermeasures": candidate.get("d5", {}).get("candidates", []),
                 "validation": candidate.get("d6", {}).get("validationTests", []),
+                "lessonsLearned": (candidate.get("d7") or {}).get("lessonsLearned") or {},
                 "sourceCaseId": candidate.get("id"),
             })
         ranked.sort(key=lambda item: item["score"], reverse=True)

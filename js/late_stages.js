@@ -35,6 +35,7 @@ function renderLateStageWorkspace(c,stage){
  ${stage === 'D5' && typeof renderD5SupplierBridgeBanner === 'function' ? renderD5SupplierBridgeBanner(c) : ''}
  ${stage === 'D5' && typeof renderD5ActionAdvicePanel === 'function' ? renderD5ActionAdvicePanel(c) : ''}
  ${stage === 'D6' && typeof renderD6AssistantPanel === 'function' ? renderD6AssistantPanel(c) : ''}
+ ${stage === 'D7' && typeof renderD7AssistantPanel === 'function' ? renderD7AssistantPanel(c) : ''}
   ${Object.entries(spec.groups).map(([group,g])=>`<div class="card"><h3>${g.label}</h3>${d[group].map((r,i)=>`<div class="card"><div class="grid-3">${Object.entries(g.fields).map(([k,f])=>lateField(`${group}.${i}.${k}`,f,r[k])).join('')}</div><button type="button" class="btn btn-secondary btn-sm" onclick="editLateRow('${stage}','${group}',${i})">행 삭제</button></div>`).join('')}<button type="button" class="btn btn-secondary" onclick="editLateRow('${stage}','${group}')">행 추가</button></div>`).join('')}
  ${Object.entries(spec.objects).map(([obj,fields])=>`<div class="card"><div class="grid-3">${Object.entries(fields).map(([k,f])=>lateField(`${obj}.${k}`,f,d[obj][k])).join('')}</div></div>`).join('')}
  ${Object.entries(spec.scalars||{}).map(([k,f])=>lateField(k,f,d[k])).join('')}
