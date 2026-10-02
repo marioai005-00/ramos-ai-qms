@@ -48,6 +48,7 @@ Copy-Item .env.example .env
 | `mailer.py` | 사내 알림 메일(SMTP) |
 | `mail_templates.py` | 알림 메일 HTML 양식 |
 | `tool_advisor.py` | D4 AI 품질도구 추천 |
+| `action_advisor.py` | D5 AI 대책 후보 추천 |
 | `stage_drafts.py` | D4~D8 근거 기반 초안 |
 | `report_export.py` | 8D 보고서 Excel 생성 |
 | `index.html`, `js/`, `css/` | 화면 |

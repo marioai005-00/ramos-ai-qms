@@ -245,6 +245,11 @@
     return result;
   }
 
+  async function d5ActionAdvice(caseId) {
+    const payload = await request('/__api__/qms/ai/d5-action-advice', { method: 'POST', body: { caseId } });
+    return payload.advice;
+  }
+
   async function d4ToolAdvice(caseId) {
     const payload = await request('/__api__/qms/ai/d4-tool-advice', { method: 'POST', body: { caseId } });
     return payload.advice;
@@ -353,6 +358,7 @@
     deleteRecord,
     generateStageDraft,
     d4ToolAdvice,
+    d5ActionAdvice,
     supplierSummary,
     downloadCaseReport,
     evaluateEscalations,

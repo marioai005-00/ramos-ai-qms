@@ -29,6 +29,7 @@ import urllib.parse
 
 from agent_runtime import AgentRuntime
 from qms_backend import QMSApiError, QMSStore
+import action_advisor
 import tool_advisor
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -393,23 +394,35 @@ def call_gemini(prompt: str, system_prompt: str = "", image_base64: str = "", mo
     return {"success": False, "engine": "gemini", "error": last_err or "Unknown Gemini error"}
 
 
-def advise_d4_tools(identity, params: dict) -> dict:
-    """Ask an external AI which D4 analysis tools fit the centrally saved Case. The reply is validated before use."""
-    case, revision = QMS_STORE.d4_tool_advice_case(identity, params)
-    prompt, errors = tool_advisor.build_prompt(case), []
-    for name, call in (("Gemini", lambda: call_gemini(prompt, tool_advisor.SYSTEM_PROMPT, max_tokens=6000)),
-                       ("Groq", lambda: call_groq(prompt, tool_advisor.SYSTEM_PROMPT, max_tokens=6000))):
+def ask_ai_for_advice(prompt: str, system_prompt: str, parse) -> tuple[dict, object]:
+    """Try Gemini, then Groq, and return the first reply that passes validation."""
+    errors = []
+    for name, call in (("Gemini", lambda: call_gemini(prompt, system_prompt, max_tokens=6000)),
+                       ("Groq", lambda: call_groq(prompt, system_prompt, max_tokens=6000))):
         result = call()
         if not result.get("success"):
             errors.append(f"{name}: {result.get('error')}")
             continue
         try:
-            advice = tool_advisor.parse_advice(str(result.get("text", "")))
+            return result, parse(str(result.get("text", "")))
         except ValueError as error:  # includes a reply that is not valid JSON
             errors.append(f"{name}: {error}")
-            continue
-        return QMS_STORE.record_d4_tool_advice(identity, case["id"], revision, result, advice)
     raise QMSApiError(502, "외부 AI에서 사용할 수 있는 추천을 받지 못했습니다. " + " / ".join(errors), code="AI_UNAVAILABLE")
+
+
+def advise_d4_tools(identity, params: dict) -> dict:
+    """Ask an external AI which D4 analysis tools fit the centrally saved Case. The reply is validated before use."""
+    case, revision = QMS_STORE.d4_tool_advice_case(identity, params)
+    provider, advice = ask_ai_for_advice(tool_advisor.build_prompt(case), tool_advisor.SYSTEM_PROMPT, tool_advisor.parse_advice)
+    return QMS_STORE.record_d4_tool_advice(identity, case["id"], revision, provider, advice)
+
+
+def advise_d5_actions(identity, params: dict) -> dict:
+    """Ask an external AI for corrective-action candidates for the root causes confirmed in D4."""
+    case, revision, similar = QMS_STORE.d5_action_advice_context(identity, params)
+    provider, advice = ask_ai_for_advice(action_advisor.build_prompt(case, similar), action_advisor.SYSTEM_PROMPT,
+                                         lambda text: action_advisor.parse_advice(text, case))
+    return QMS_STORE.record_d5_action_advice(identity, case["id"], revision, provider, advice)
 
 
 class PortalHandler(SimpleHTTPRequestHandler):
@@ -660,7 +673,7 @@ class PortalHandler(SimpleHTTPRequestHandler):
         qms_paths = {
             "/__api__/auth/login", "/__api__/auth/logout", "/__api__/auth/change-password",
             "/__api__/qms/supplier-notices", "/__api__/qms/supplier-tickets", "/__api__/qms/assembly-defects", "/__api__/qms/internal-quality", "/__api__/qms/state", "/__api__/qms/stage-version", "/__api__/qms/approval",
-            "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/ai/stage-draft", "/__api__/qms/ai/d4-tool-advice", "/__api__/qms/records/delete", "/__api__/qms/mail/test", "/__api__/qms/escalations/evaluate",
+            "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/ai/stage-draft", "/__api__/qms/ai/d4-tool-advice", "/__api__/qms/ai/d5-action-advice", "/__api__/qms/records/delete", "/__api__/qms/mail/test", "/__api__/qms/escalations/evaluate",
             "/__api__/qms/agent-runs", "/__api__/qms/scheduler/evaluate",
         }
         if clean_path not in qms_paths and not agent_run_action and not case_source_action and not finding_action and not evidence_upload and not internal_update and not notice_update and not ticket_update and not assembly_update:
@@ -754,6 +767,8 @@ class PortalHandler(SimpleHTTPRequestHandler):
             self._send_json(200, {"success": True, **QMS_STORE.send_test_mail(identity)})
         elif clean_path == "/__api__/qms/records/delete":
             self._send_json(200, {"success": True, **QMS_STORE.delete_record(identity, params)})
+        elif clean_path == "/__api__/qms/ai/d5-action-advice":
+            self._send_json(200, {"success": True, "advice": advise_d5_actions(identity, params)})
         elif clean_path == "/__api__/qms/ai/d4-tool-advice":
             self._send_json(200, {"success": True, "advice": advise_d4_tools(identity, params)})
         elif clean_path == "/__api__/qms/ai/stage-draft":

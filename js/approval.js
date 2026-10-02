@@ -10,7 +10,7 @@ function approvalContent(c, stage) {
   copy.d5 = {candidates:[], ...copy.d5, pcnEcn:{ecnNumber:'',pcnRequired:null,customerApprovalStatus:'미확인',...copy.d5?.pcnEcn}};
   copy.d6 = {validationTests:[], ...copy.d6, implementationDetails:copy.d6?.implementationDetails||{}, beforeAfter:copy.d6?.beforeAfter||{}};
   const header = Object.fromEntries(['id','customer','customerContact','customerEmail','product','partNumber','internalPartNumber','lotNumber','incidentSite','incidentDate','defectQty','inspectQty','ppm','claimTitle','lineStop','safetyRisk','recurrentDefect'].map(k=>[k,copy[k]??null]));
-  const ignored = new Set(['approval','aiDraft','toolAdvice','isIsNotDraft','recommendations','savedAt','generatedAt']);
+  const ignored = new Set(['approval','aiDraft','toolAdvice','actionAdvice','isIsNotDraft','recommendations','savedAt','generatedAt']);
   function clean(value) {
     if(Array.isArray(value)) return value.map(clean);
     if(value && typeof value==='object') return Object.fromEntries(Object.keys(value).sort().filter(k=>!ignored.has(k)).map(k=>[k,clean(value[k])]));

@@ -73,3 +73,12 @@
 .d4-advice-hint p { margin: 0 0 2px; line-height: 1.5; color: var(--text-primary); }
 .d4-advice-hint b { color: var(--text-secondary); margin-right: 6px; }
 @media (max-width: 1400px) { .d4-advice-profile { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* D5 corrective-action advice */
+.d5-advice-cause { font-weight: 400; color: var(--text-secondary); margin-left: 6px; }
+.d5-advice-check { width: 18px; height: 18px; margin-top: 6px; cursor: pointer; }
+.d5-strength { font-size: 0.68rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); white-space: nowrap; font-weight: 700; }
+.d5-strength-eliminate { color: #10b981; border-color: #10b981; }
+.d5-strength-prevent { color: #22d3ee; border-color: #22d3ee; }
+.d5-strength-detect { color: #f59e0b; border-color: #f59e0b; }
+.d5-strength-administrative { color: #ef4444; border-color: #ef4444; }
