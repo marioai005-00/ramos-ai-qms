@@ -1,4 +1,4 @@
-"""Notification mail: off by default, test mode redirects every message, SLA alerts mail once. SMTP is mocked."""
+"""Notification mail: off by default, test mode redirects every message, SLA alerts and the D1 team share. SMTP is mocked."""
 from datetime import datetime, timedelta, timezone
 import os
 from pathlib import Path
@@ -85,13 +85,85 @@ class MailTests(unittest.TestCase):
         # The people the alert was meant for are recorded even though only the test address received it.
         self.assertIn("sahwang@ramostek.com", log[0]["intended"])
 
-    def test_levels_below_the_configured_one_send_nothing(self):
+    def half_elapsed_intake(self):
         stamp = (datetime.now(timezone(timedelta(hours=9))) - timedelta(hours=14)).strftime("%Y-%m-%d %H:%M")
         self.store.save_state(self.reviewer, {"cases": [], "intakeQueue": [{"intakeId": "INT-HALF", "status": "Quality Review Pending", "submittedAt": stamp}]}, 0, "seed")
+
+    def test_attention_level_is_mailed_once_by_default(self):
+        self.half_elapsed_intake()
         with patch.dict(os.environ, SMTP_ENV):
+            events = self.store.evaluate_sla_escalations(self.reviewer)
+            self.store.evaluate_sla_escalations(self.reviewer)
+        self.assertEqual(events[0]["level"], "L1_ATTENTION")
+        self.assertEqual(len(self.sent()), 1)
+        self.assertIn("기한 주의", self.sent()[0]["Subject"])
+
+    def test_levels_outside_the_configured_ones_send_nothing(self):
+        self.half_elapsed_intake()
+        with patch.dict(os.environ, {**SMTP_ENV, "QMS_MAIL_SLA_LEVELS": "L3_OVERDUE"}):
             events = self.store.evaluate_sla_escalations(self.reviewer)
         self.assertEqual(events[0]["level"], "L1_ATTENTION")
         self.smtp.assert_not_called()
+
+    def test_overdue_alert_repeats_once_a_day(self):
+        self.overdue_intake()
+        with patch.dict(os.environ, SMTP_ENV):
+            self.store.evaluate_sla_escalations(self.reviewer)
+            self.store.evaluate_sla_escalations(self.reviewer)
+            self.assertEqual(len(self.sent()), 1)
+            # Yesterday's mail has yesterday's key, so the still-overdue alert is mailed again today.
+            with self.store._connect() as db:
+                db.execute("UPDATE mail_log SET ref = substr(ref, 1, instr(ref, ':')) || '2000-01-01' WHERE kind='SLA'")
+            self.store.evaluate_sla_escalations(self.reviewer)
+            self.store.evaluate_sla_escalations(self.reviewer)
+        self.assertEqual(len(self.sent()), 2)
+
+    def test_unchanged_outcome_is_not_logged_every_minute(self):
+        self.overdue_intake()
+        for _ in range(3):
+            self.store.evaluate_sla_escalations(self.reviewer)
+        self.assertEqual([item["status"] for item in self.store.mail_status(self.reviewer)["log"]], ["DISABLED"])
+        self.smtp.return_value.send_message.side_effect = OSError("connection refused")
+        with patch.dict(os.environ, SMTP_ENV):
+            for _ in range(3):
+                self.store.evaluate_sla_escalations(self.reviewer)
+        # One failed attempt is recorded; the retry waits an hour.
+        self.assertEqual([item["status"] for item in self.store.mail_status(self.reviewer)["log"]], ["FAILED", "DISABLED"])
+        self.assertEqual(self.smtp.return_value.send_message.call_count, 1)
+
+    def case_state(self, confirmed, team):
+        return {"intakeQueue": [], "cases": [{
+            "id": "RAMOS-8D-T-001", "customer": "LG전자", "product": "eMMC", "partNumber": "MMACGD8J0F-HZRAF1-LPAGA00", "lotNumber": "0QH321500A04-LPAGA00",
+            "claimTitle": "부팅 불가", "incidentSite": "고객 SMT 라인", "defectQty": 3, "inspectQty": 1000, "receiptDate": "2026-10-02 09:00", "status": "Open",
+            "team": [{"role": role, "name": name, "dept": "품질", "contact": contact, "status": "Active"} for role, name, contact in team],
+            "cftRecommendation": {"humanConfirmed": confirmed},
+        }]}
+
+    def test_confirmed_d1_team_receives_the_nonconformance_once(self):
+        team = [("8D Leader", "황선아", "sahwang@ramostek.com"), ("Process Engineer", "박지훈", "jhpark@ramostek.com")]
+        with patch.dict(os.environ, SMTP_ENV):
+            revision = self.store.save_state(self.reviewer, self.case_state(False, team), 0, "case")["revision"]
+            self.smtp.assert_not_called()  # a team that nobody confirmed is not mailed
+            revision = self.store.save_state(self.reviewer, self.case_state(True, team), revision, "confirm")["revision"]
+            revision = self.store.save_state(self.reviewer, self.case_state(True, team), revision, "unrelated edit")["revision"]
+            self.assertEqual(len(self.sent()), 1)
+            message = self.sent()[0]
+            self.assertEqual(message["To"], "sjkim@ramostek.com")
+            self.assertIn("[부적합 공유] RAMOS-8D-T-001 LG전자", message["Subject"])
+            for expected in ("0QH321500A04-LPAGA00", "부팅 불가", "3 / 1000", "황선아", "jhpark@ramostek.com", "24시간"):
+                self.assertIn(expected, message.get_content())
+            # A changed team is told again.
+            self.store.save_state(self.reviewer, self.case_state(True, team + [("Customer Quality", "김영업", "sales@ramostek.com")]), revision, "team change")
+            log = self.store.mail_status(self.reviewer)["log"]
+        self.assertEqual(len(self.sent()), 2)
+        self.assertEqual({item["kind"] for item in log}, {"CASE_SHARE"})
+        self.assertEqual(log[0]["intended"], ["jhpark@ramostek.com", "sahwang@ramostek.com", "sales@ramostek.com"])
+
+    def test_real_mode_sends_the_share_to_the_team(self):
+        team = [("8D Leader", "황선아", "sahwang@ramostek.com"), ("Process Engineer", "박지훈", "jhpark@ramostek.com")]
+        with patch.dict(os.environ, {**SMTP_ENV, "QMS_MAIL_TEST_MODE": "false"}):
+            self.store.save_state(self.reviewer, self.case_state(True, team), 0, "case")
+        self.assertEqual(self.sent()[0]["To"], "jhpark@ramostek.com, sahwang@ramostek.com")
 
     def test_real_mode_uses_intended_recipients(self):
         self.overdue_intake()

@@ -477,7 +477,10 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
                 after_hash=after_hash,
                 details={"reason": reason[:500], "revision": new_revision},
             )
-            return {"revision": new_revision, "updatedAt": now, "stateHash": after_hash}
+            result = {"revision": new_revision, "updatedAt": now, "stateHash": after_hash}
+        # Sent after the save has committed, outside the database lock.
+        self._mail_team_assignments(identity.user["username"], state, previous_state)
+        return result
 
     _STAGE_KEYS = tuple(f"D{i}" for i in range(1, 9))
     _GATE_ROLES = ("drafter", "leader", "champion", "quality_dispatcher")
@@ -958,7 +961,8 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
                 "externalNotification": False,
             } for row in rows]
         # Mail goes out after the database work, so a slow mail server never holds the lock.
-        self._mail_sla_escalations([item for item in result if item["id"] in created_ids])
+        team_emails = {str(c.get("id")): self._team_emails(c) for c in record["state"].get("cases", []) if isinstance(c, dict)}
+        self._mail_sla_escalations(result, created_ids, team_emails)
         return result
 
 
