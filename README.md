@@ -31,7 +31,7 @@ Copy-Item .env.example .env
 
 - 승인·종결은 로그인한 실제 권한자의 서버 결재 기록이 있어야 저장된다.
 - 화면·보고서·초안에 예시 값이나 지어낸 측정·판정을 넣지 않는다.
-- 외부 이메일은 보내지 않는다. 송부 준비 기록만 남긴다.
+- 시스템이 보내는 메일은 사내 SLA 알림뿐이다(SMTP 설정 시). 고객 보고서 송부는 기록만 남긴다.
 - 외주 계정은 자기 업체 기록만 본다.
 
 ## 구성
@@ -45,6 +45,7 @@ Copy-Item .env.example .env
 | `supplier_notices.py` | 우리 회사 → 외주사 통보 |
 | `supplier_tickets.py` | 외주사 PCN·Issue 접수, 외주사 현황 집계 |
 | `assembly_defects.py` | 제품별 외주 조립 불량 |
+| `mailer.py` | 사내 알림 메일(SMTP) |
 | `stage_drafts.py` | D4~D8 근거 기반 초안 |
 | `report_export.py` | 8D 보고서 Excel 생성 |
 | `index.html`, `js/`, `css/` | 화면 |

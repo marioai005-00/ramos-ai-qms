@@ -37,7 +37,7 @@
     setTimeout(() => refreshAgentOperations(), 0);
     return `
       <section class="agent-ops-shell">
-        ${renderQmsPageHeader({ title:'Agent Operations · 실행 및 검토', icon:'workflow', description:'근거에 기반한 AI 초안을 검토합니다. 공식 Case 변경은 실제 권한자의 승인 후 적용됩니다.', className:'agent-ops-commandbar', badges:[{label:'EXTERNAL MAIL OFF',tone:'neutral'},{label:'MES/ERP WRITE OFF',tone:'neutral'},{label:'AUDIT ON',tone:'success'}] })}
+        ${renderQmsPageHeader({ title:'Agent Operations · 실행 및 검토', icon:'workflow', description:'근거에 기반한 AI 초안을 검토합니다. 공식 Case 변경은 실제 권한자의 승인 후 적용됩니다.', className:'agent-ops-commandbar', badges:[{label:'MES/ERP WRITE OFF',tone:'neutral'},{label:'AUDIT ON',tone:'success'}], actions: typeof canUseMailAdmin === 'function' && canUseMailAdmin() ? `<button type="button" class="btn btn-secondary" onclick="openMailAdminModal()"><i data-lucide="mail"></i> 알림 메일 설정·시험</button>` : '' })}
 
         <div class="agent-ops-requestline">
           <div class="agent-request-context">

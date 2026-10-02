@@ -103,14 +103,16 @@ from internal_quality import InternalQualityMixin
 from supplier_notices import SupplierNoticesMixin
 from supplier_tickets import SupplierSummaryMixin, SupplierTicketsMixin
 from assembly_defects import AssemblyDefectsMixin
+from mailer import MailerMixin
 from report_export import ReportExportMixin
 from stage_drafts import StageDraftMixin
 
 
-class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin, SupplierSummaryMixin, AssemblyDefectsMixin, StageDraftMixin, ReportExportMixin):
+class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin, SupplierSummaryMixin, AssemblyDefectsMixin, StageDraftMixin, ReportExportMixin, MailerMixin):
     """Thread-safe SQLite store used by the local portal server."""
 
     def __init__(self, project_root: Path):
+        self.project_root = project_root
         configured = os.environ.get("QMS_DATABASE_PATH", "").strip()
         self.database_path = Path(configured) if configured else project_root / "data" / "qms.sqlite3"
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
@@ -313,6 +315,7 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
             self._init_supplier_notices(db)
             self._init_supplier_tickets(db)
             self._init_assembly_defects(db)
+            self._init_mail(db)
             self._seed_users(db)
 
     def _seed_users(self, db: sqlite3.Connection) -> None:
@@ -883,6 +886,7 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
         waiting_statuses = {"Quality Review Pending", "Quality Review In Progress", "Revision Requested"}
         intakes = [item for item in record["state"].get("intakeQueue", []) if isinstance(item, dict) and item.get("intakeId")]
         intake_ids = {str(item["intakeId"]) for item in intakes}
+        created_ids: list[int] = []
         with self._lock, self._connect() as db:
             def watch(target_id: str, milestones: list, roles: dict[str, list[str]], prefix: str) -> None:
                 for milestone, due, completed, window_hours in milestones:
@@ -918,6 +922,7 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
                          remaining, canonical_json(roles[level]), utc_now()),
                     )
                     if cursor.rowcount:
+                        created_ids.append(cursor.lastrowid)
                         self._audit(db, identity.user["id"], identity.user["username"], "SLA_ESCALATED", "case_milestone", f"{target_id}:{milestone}", details={"level": level, "remainingHours": round(remaining, 2), "externalNotification": False})
 
             for case in record["state"].get("cases", []):
@@ -944,7 +949,7 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
             rows = db.execute(
                 "SELECT * FROM sla_escalations WHERE status='OPEN' ORDER BY CASE level WHEN 'L3_OVERDUE' THEN 1 WHEN 'L2_CRITICAL' THEN 2 ELSE 3 END, due_at ASC"
             ).fetchall()
-            return [{
+            result = [{
                 "id": row["id"], "caseId": row["case_id"], "milestone": row["milestone"],
                 "level": row["level"], "status": row["status"], "reason": row["reason"],
                 "dueAt": row["due_at"], "remainingHours": row["remaining_hours"],
@@ -952,6 +957,9 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
                 "targetType": "intake" if row["case_id"] in intake_ids else "case",
                 "externalNotification": False,
             } for row in rows]
+        # Mail goes out after the database work, so a slow mail server never holds the lock.
+        self._mail_sla_escalations([item for item in result if item["id"] in created_ids])
+        return result
 
 
     @staticmethod

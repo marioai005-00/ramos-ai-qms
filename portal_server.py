@@ -509,6 +509,9 @@ class PortalHandler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(item["content"])
             return True
+        if clean_path == "/__api__/qms/mail/status":
+            self._send_json(200, {"success": True, **QMS_STORE.mail_status(self._session_identity())})
+            return True
         if clean_path == "/__api__/qms/supplier-summary":
             self._send_json(200, {"success": True, **QMS_STORE.supplier_quality_summary(self._session_identity())})
             return True
@@ -637,7 +640,7 @@ class PortalHandler(SimpleHTTPRequestHandler):
         qms_paths = {
             "/__api__/auth/login", "/__api__/auth/logout", "/__api__/auth/change-password",
             "/__api__/qms/supplier-notices", "/__api__/qms/supplier-tickets", "/__api__/qms/assembly-defects", "/__api__/qms/internal-quality", "/__api__/qms/state", "/__api__/qms/stage-version", "/__api__/qms/approval",
-            "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/ai/stage-draft", "/__api__/qms/records/delete", "/__api__/qms/escalations/evaluate",
+            "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/ai/stage-draft", "/__api__/qms/records/delete", "/__api__/qms/mail/test", "/__api__/qms/escalations/evaluate",
             "/__api__/qms/agent-runs", "/__api__/qms/scheduler/evaluate",
         }
         if clean_path not in qms_paths and not agent_run_action and not case_source_action and not finding_action and not evidence_upload and not internal_update and not notice_update and not ticket_update and not assembly_update:
@@ -727,6 +730,8 @@ class PortalHandler(SimpleHTTPRequestHandler):
             self._send_json(201, {"success": True, **QMS_STORE.prepare_dispatch(identity, params)})
         elif clean_path == "/__api__/qms/ai/d1-d3-draft":
             self._send_json(200, {"success": True, "draft": QMS_STORE.build_d1_d3_draft(identity, params.get("case"))})
+        elif clean_path == "/__api__/qms/mail/test":
+            self._send_json(200, {"success": True, **QMS_STORE.send_test_mail(identity)})
         elif clean_path == "/__api__/qms/records/delete":
             self._send_json(200, {"success": True, **QMS_STORE.delete_record(identity, params)})
         elif clean_path == "/__api__/qms/ai/stage-draft":
