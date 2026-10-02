@@ -98,7 +98,7 @@ async function previewPendingD4Attachment(index){
 }
 async function handleD4EvidenceFiles(fileList){
   const c=getActiveCase();const row=c?.d4?.selectedTools?.[activeD4EvidenceIndex];if(!row)return;
-  for(const file of [...fileList]){const extension=(file.name.split('.').pop()||'').toLowerCase();if(!D4_ALLOWED_EXTENSIONS.includes(extension)){alert(`${file.name}: 지원하지 않는 형식입니다.`);continue;}if(file.size>30*1024*1024){alert(`${file.name}: 파일당 30MB를 초과했습니다.`);continue;}const id=makeD4AttachmentId();const storageKey=`${c.id}__${row.id}__${id}`;try{await putD4EvidenceFile(storageKey,file);pendingD4NewKeys.push(storageKey);pendingD4Attachments.push({id,storageKey,name:file.name,type:file.type||'application/octet-stream',extension,size:file.size,previewType:file.type.startsWith('image/')?'image':extension==='pdf'?'pdf':'document',uploadedBy:CURRENT_USER.name,uploadedAt:new Date().toISOString().replace('T',' ').slice(0,16)});}catch(error){console.error(error);alert(`${file.name}: 브라우저 Evidence 저장소에 보관하지 못했습니다.`);}}
+  for(const file of [...fileList]){const extension=(file.name.split('.').pop()||'').toLowerCase();if(!D4_ALLOWED_EXTENSIONS.includes(extension)){alert(`${file.name}: 지원하지 않는 형식입니다.`);continue;}if(file.size>30*1024*1024){alert(`${file.name}: 파일당 30MB를 초과했습니다.`);continue;}const id=makeD4AttachmentId();const storageKey=`${c.id}__${row.id}__${id}`;try{await putD4EvidenceFile(storageKey,file);pendingD4NewKeys.push(storageKey);pendingD4Attachments.push({id,storageKey,name:file.name,type:file.type||'application/octet-stream',extension,size:file.size,previewType:file.type.startsWith('image/')?'image':extension==='pdf'?'pdf':'document',uploadedBy:CURRENT_USER.name,uploadedAt:qmsLocalTimestamp()});}catch(error){console.error(error);alert(`${file.name}: 브라우저 Evidence 저장소에 보관하지 못했습니다.`);}}
   document.getElementById('d4AttachmentList').innerHTML=renderD4AttachmentList();if(window.lucide)lucide.createIcons();
 }
 function removePendingD4Attachment(index){
@@ -133,7 +133,7 @@ async function saveD4EvidenceArtifact(){
   if(!objective||!conclusion||(!rows.length&&!pendingD4Attachments.length)){alert('분석 목적과 결론을 작성하고, 분석 양식 또는 완성된 분석자료 파일 중 하나를 등록해 주세요.');return;}
   if(confirmed&&rows.some(item=>item.values.some(value=>!value))){alert('사람 확인 전에 각 분석 행의 모든 칸을 작성해 주세요.');return;}
   const previous={hypothesis:row.hypothesis,evidence:row.evidence,finding:row.finding,artifact:row.artifact,approval:c.d4.approval};
-  row.hypothesis=objective;row.evidence=sources;row.finding=conclusion;row.artifact={version:1,documentNo:document.getElementById('d4EvDocNo').value.trim()||`${c.id}-D4-${schema.code}`,objective,sourceEvidence:sources,conclusion,rows,attachments:pendingD4Attachments.map(item=>({...item})),humanConfirmed:confirmed,updatedBy:CURRENT_USER.name,updatedAt:new Date().toISOString().replace('T',' ').slice(0,16)};
+  row.hypothesis=objective;row.evidence=sources;row.finding=conclusion;row.artifact={version:1,documentNo:document.getElementById('d4EvDocNo').value.trim()||`${c.id}-D4-${schema.code}`,objective,sourceEvidence:sources,conclusion,rows,attachments:pendingD4Attachments.map(item=>({...item})),humanConfirmed:confirmed,updatedBy:CURRENT_USER.name,updatedAt:qmsLocalTimestamp()};
   c.d4.approval={status:'Draft',humanConfirmed:false};
   try{
     saveAppData();

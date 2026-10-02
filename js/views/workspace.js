@@ -1046,7 +1046,7 @@ verificationStatus는 모든 행에서 Required입니다.
 
       d2.isIsNot = isNotRows;
       d2.isIsNotDraft = {
-        generatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+        generatedAt: qmsLocalTimestamp(),
         source: usedKoreanAI ? '한국어 AI 초안 · 원본 확인 필요' : '입력 기반 초안 · 한국어 AI 응답 미확인',
         language: 'ko',
         status: 'Human Verification Required'
@@ -1136,7 +1136,7 @@ verificationStatus는 모든 행에서 Required입니다.
       d2.problemStatement = generatedStatement;
       d2.approval = { ...(d2.approval || {}), status:'Draft', humanConfirmed:false };
       d2.aiDraft = {
-        generatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+        generatedAt: qmsLocalTimestamp(),
         source: 'AI 또는 입력 기반 초안 · 원본 확인 필요'
       };
 
@@ -1157,7 +1157,7 @@ verificationStatus는 모든 행에서 Required입니다.
       const form = document.getElementById('d2QualityForm');
       const d2 = captureD2Form(c);
       if (!approve) {
-        d2.approval = { ...(d2.approval || {}), status:'Draft', humanConfirmed:false, savedAt:new Date().toISOString().replace('T',' ').slice(0,16) };
+        d2.approval = { ...(d2.approval || {}), status:'Draft', humanConfirmed:false, savedAt:qmsLocalTimestamp() };
         saveAppData(); alert('D2 작성 내용이 임시 저장되었습니다.'); renderCurrentView(); return;
       }
       if (!isD1StageComplete(c)) { alert('D1 CFT와 RACI를 먼저 확정해 주세요.'); return; }
@@ -1364,7 +1364,7 @@ verificationStatus는 모든 행에서 Required입니다.
       const mesQty=sources.mes.processStocks.reduce((sum,row)=>sum+Number(row.currentQty||0),0); const mesHold=sources.mes.processStocks.reduce((sum,row)=>sum+Number(row.holdQty||0),0);
       if (finished) Object.assign(finished,{lot:rakRows.map(row=>row.lot).filter(Boolean).join(', ')||c.lotNumber,totalQty:erpQty,holdQty:erpHold,status:erpQty===0?'Not Applicable':erpHold>=erpQty?'Hold':'Screening',evidence:rakRows.map(row=>`${row.warehouse}:${row.evidence}`).join(' / ')});
       if (wip) Object.assign(wip,{lot:[...new Set(sources.mes.processStocks.map(row=>row.lot).filter(Boolean))].join(', ')||c.lotNumber,totalQty:mesQty,holdQty:mesHold,status:mesQty===0?'Not Applicable':mesHold>=mesQty?'Hold':'Screening',evidence:sources.mes.processStocks.map(row=>`${row.process}:${row.evidence}`).join(' / ')});
-      d3.inventoryReconciliation={erpFinishedQty:erpQty,mesWipQty:mesQty,syncedAt:new Date().toISOString().replace('T',' ').slice(0,16),source:'ERP RAK4+RAK5 / MES process WIP'};
+      d3.inventoryReconciliation={erpFinishedQty:erpQty,mesWipQty:mesQty,syncedAt:qmsLocalTimestamp(),source:'ERP RAK4+RAK5 / MES process WIP'};
     }
 
     function applyInventorySourcesToMaterialFlow() {
@@ -1535,7 +1535,7 @@ function getLotPrefixAndSeq(lotStr = '') {
         const c=getActiveCase(); const d3=ensureD3Structure(c); let filtered=filterInventoryRowsForCase(rows,columns,c);
         if (sourceType==='erp'&&columns.warehouse) filtered=filtered.filter(row=>normalizeInventoryHeader(row[columns.warehouse]).includes(normalizeInventoryHeader(sourceCode)));
         if (!filtered.length) throw new Error(`${c.lotNumber || c.partNumber} 및 ${sourceCode} 조건에 맞는 행을 찾지 못했습니다.`);
-        const importedAt=new Date().toISOString().replace('T',' ').slice(0,16);
+        const importedAt=qmsLocalTimestamp();
         if (sourceType === 'erp') {
           // Group by Lot to detect target and adjacent lots individually
           const lotMap = new Map();
@@ -1765,7 +1765,7 @@ function getLotPrefixAndSeq(lotStr = '') {
 
     function saveD3Containment(approve) {
       const c = getActiveCase(); const form = document.getElementById('d3QualityForm'); const d3 = captureD3Form(c);
-      if (!approve) { d3.approval={...(d3.approval||{}),status:'Draft',humanConfirmed:false,savedAt:new Date().toISOString().replace('T',' ').slice(0,16)}; saveAppData(); alert('D3 작성 내용이 임시 저장되었습니다.'); renderCurrentView(); return; }
+      if (!approve) { d3.approval={...(d3.approval||{}),status:'Draft',humanConfirmed:false,savedAt:qmsLocalTimestamp()}; saveAppData(); alert('D3 작성 내용이 임시 저장되었습니다.'); renderCurrentView(); return; }
       if (!isD2StageComplete(c)) { alert('D2 문제 정의를 먼저 승인해 주세요.'); return; }
       const sources=d3.inventorySources; const warehouses=['RAK4','RAK5'].map(code=>sources.erp[code]);
       const invErrors = [];
@@ -1939,7 +1939,7 @@ function getLotPrefixAndSeq(lotStr = '') {
 
     function saveD4Analysis(approve) {
       const c=getActiveCase(); const d4=captureD4Form(c); const form=document.getElementById('d4QualityForm');
-      if(!approve){d4.approval={status:'Draft',humanConfirmed:false,savedAt:new Date().toISOString().replace('T',' ').slice(0,16)};saveAppData();alert('D4 분석 내용이 임시 저장되었습니다.');renderCurrentView();return;}
+      if(!approve){d4.approval={status:'Draft',humanConfirmed:false,savedAt:qmsLocalTimestamp()};saveAppData();alert('D4 분석 내용이 임시 저장되었습니다.');renderCurrentView();return;}
       if(!isD3StageComplete(c)){alert('D4 승인 전 D3 봉쇄 범위와 효과성 승인이 필요합니다.');return;}
       const ids=d4.selectedTools.map(row=>row.id); if(D4_CORE_TOOL_IDS.some(id=>!ids.includes(id))){alert('D4 필수 도구 5개(타임라인·Process Flow·Change Point·Fishbone·3-Track 5 Why)를 적용해 주세요.');return;}
       if(d4.selectedTools.some(row=>!row.hypothesis||!row.evidence||!row.finding||!row.owner||row.status==='Planned'||row.status==='Testing'||!row.verified)){alert('선택한 모든 품질도구의 가설·Evidence·결과·담당자·판정을 작성하고 사실 확인해 주세요.');return;}
@@ -2312,7 +2312,7 @@ function getLotPrefixAndSeq(lotStr = '') {
       if (nextRole && (!assigned || assigned.email !== CURRENT_USER.email) && !isMaster) {
         return `<span class="badge-pill badge-warn">${escapeWorkspaceValue(assigned?.name || 'CFT 담당자 지정 필요')} 결재 대기</span>`;
       }
-      const nowStr = new Date().toISOString().replace('T',' ').slice(0,16);
+      const nowStr = qmsLocalTimestamp();
 
       // 1. Initial State: Drafter needs to submit
       if (signOff.status === 'Draft' || !signOff.drafter) {

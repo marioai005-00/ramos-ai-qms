@@ -865,7 +865,7 @@
           dept: CURRENT_USER.dept,
           email: CURRENT_USER.email
         },
-        startedAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
+        startedAt: qmsLocalTimestamp()
       };
       saveAppData();
       renderCurrentView();
@@ -973,7 +973,7 @@
         return;
       }
 
-      const decisionAt = new Date().toISOString().replace('T', ' ').slice(0, 16);
+      const decisionAt = qmsLocalTimestamp();
       item.triage = {
         ...(item.triage || {}),
         status: decision === 'approve' ? 'Approved' : decision === 'revision' ? 'Revision Requested' : 'Rejected',
@@ -1037,8 +1037,8 @@
         application: '고객 부적합 접수 승인 Case',
         receiptDate: item.submittedAt,
         incidentDate: item.submittedAt,
-        dueDateInitial: dueInitial.toISOString().replace('T', ' ').slice(0, 16),
-        dueDateFinal: dueFinal.toISOString().replace('T', ' ').slice(0, 16),
+        dueDateInitial: qmsLocalTimestamp(dueInitial),
+        dueDateFinal: qmsLocalTimestamp(dueFinal),
         defectQty: item.defectQty,
         inspectQty: item.inspectQty,
         ppm: item.ppm,
@@ -1351,7 +1351,7 @@
       intakeRequestVersion++;
       const selectedFiles=[...intakeFiles];
       const intakeOwner = readSelectedIntakeOwner();
-      const submittedAt = new Date().toISOString().replace('T', ' ').slice(0, 16);
+      const submittedAt = qmsLocalTimestamp();
       const queue = appData.intakeQueue || (appData.intakeQueue = []);
       const intakeId = `RAMOS-INTAKE-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(queue.length + 1).padStart(3, '0')}`;
       const lineStop = form.lineStop.value === 'true';

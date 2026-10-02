@@ -534,7 +534,7 @@
       });
       c.cftRecommendation = {
         status: 'AI Suggested - Human Review Required',
-        appliedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+        appliedAt: qmsLocalTimestamp(),
         humanConfirmed: false
       };
       saveAppData();

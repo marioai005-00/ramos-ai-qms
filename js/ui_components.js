@@ -11,3 +11,9 @@ function renderQmsMetric({ label, value, note = '', tone = 'neutral', className 
 function renderQmsEmpty({ title, description = '', icon = 'inbox', compact = false }) {
   return `<div class="qms-empty-state ${compact ? 'is-compact' : ''}"><i data-lucide="${/^[a-z0-9-]+$/.test(icon) ? icon : 'inbox'}" aria-hidden="true"></i><strong>${qmsUiEscape(title)}</strong>${description ? `<p>${qmsUiEscape(description)}</p>` : ''}</div>`;
 }
+// Timestamps shown and compared as local time are written as local time ("YYYY-MM-DD HH:MM").
+// Writing the UTC clock here made every deadline start nine hours early in Korea.
+function qmsLocalTimestamp(date = new Date()) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
