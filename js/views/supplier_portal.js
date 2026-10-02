@@ -524,7 +524,7 @@ function renderSupplierSubmitForm(isSupplier = false) {
           </div>
           <div class="form-group">
             <label class="form-label">생산 Lot No (Affected Lot)</label>
-            <input type="text" class="form-control num-mono" name="lotNo" value="${f.lotNo}" placeholder="예: HN260901-A" required>
+            <input type="text" class="form-control num-mono" name="lotNo" value="${f.lotNo}" placeholder="생산 Lot 번호" required>
           </div>
         </div>
 
@@ -584,7 +584,7 @@ function renderPCNTrackForm(f) {
 
     <div class="form-group" style="margin-top:8px;">
       <label class="form-label">접수 제목</label>
-      <input type="text" class="form-control" name="title" value="${f.title}" placeholder="예: C102 MLCC 고온내열 X7R 소자 대체 및 리플로우 프로파일 조정 승인의 건" required style="font-weight:700;">
+      <input type="text" class="form-control" name="title" value="${f.title}" placeholder="변경 요청 제목" required style="font-weight:700;">
     </div>
     <div class="form-group" style="margin-top:8px;">
       <label class="form-label">상세 변경 배경 및 이슈 설명</label>
@@ -614,7 +614,7 @@ function renderPCNTrackForm(f) {
           ${supplierPortalState.comparisonRows.map((row, idx) => `
             <tr>
               <td>
-                <input type="text" class="form-control form-control-sm" value="${row.item}" placeholder="예: MLCC 유전체 등급" onchange="updateComparisonField(${idx}, 'item', this.value)" required>
+                <input type="text" class="form-control form-control-sm" value="${row.item}" placeholder="비교 항목" onchange="updateComparisonField(${idx}, 'item', this.value)" required>
               </td>
               <td>
                 <input type="text" class="form-control form-control-sm" value="${row.current}" placeholder="현행 사양 상세" onchange="updateComparisonField(${idx}, 'current', this.value)" required>
@@ -789,7 +789,7 @@ function renderIssueTrackForm(f) {
     <div class="supplier-field-grid col-2">
       <div class="form-group">
         <label class="form-label">1차 FA 분석 결과 통보 예정일시 (24시간 이내 원칙)</label>
-        <input type="text" class="form-control num-mono" name="faReportDeadline" value="${f.faReportDeadline}" placeholder="예: 2026-09-09 12:00" required>
+        <input type="date" class="form-control num-mono" name="faReportDeadline" value="${f.faReportDeadline}">
       </div>
       <div class="form-group">
         <label class="form-label">라모스 본사 긴급 기술지원 요청 사항</label>
@@ -1006,7 +1006,7 @@ function openSupplierTicketModal(ticketId) {
               <div>• <b>공장 내 재고 격리:</b> ${ticket.incident?.quarantineQty || 0}개 격리 완료 (${ticket.incident?.quarantineLocation || 'Q-Zone 격리'})</div>
               <div>• <b>운송/입고 차단:</b> ${ticket.incident?.inTransitAction || '전산 Lock 조치'}</div>
               <div>• <b>초동 조치(ICA):</b> ${ticket.incident?.containmentAction || '설비 점검 및 선별'}</div>
-              <div>• <b>1차 FA 통보 기한:</b> <span class="num-mono" style="color:#38bdf8;">${ticket.incident?.faReportDeadline || '24h 이내'}</span></div>
+              <div>• <b>1차 FA 통보 기한:</b> <span class="num-mono" style="color:#38bdf8;">${ticket.incident?.faReportDeadline || '미입력'}</span></div>
             </div>
           </div>
         `}
@@ -1016,9 +1016,9 @@ function openSupplierTicketModal(ticketId) {
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <label style="font-size:0.78rem; font-weight:700; color:var(--text-secondary);">제출된 증빙 및 시험 성적서 파일 (${(ticket.evidenceFiles || []).length}건)</label>
             ${!isSupplier ? `
-              <button class="btn btn-secondary btn-sm" onclick="runSupplierAiInspection('${ticket.ticketId}')" style="color:#38bdf8; border-color:rgba(56,189,248,0.4); font-weight:700; display:flex; align-items:center; gap:5px;" title="AI 레포트 정밀 감사 실행">
+              <button class="btn btn-secondary btn-sm" onclick="runSupplierAiInspection('${ticket.ticketId}')" style="color:#38bdf8; border-color:rgba(56,189,248,0.4); font-weight:700; display:flex; align-items:center; gap:5px;" title="입력 누락과 첨부 목록 확인">
                 <i data-lucide="bot" style="width:14px; height:14px;"></i>
-                <span>🤖 AI SQE 레포트 정밀 감사 & 보완점 추출</span>
+                <span>제출 자료 점검</span>
               </button>
             ` : `
               <span style="font-size:0.72rem; color:var(--text-muted);">* 파일을 누르면 중앙 서버에 보관된 원본을 내려받습니다.</span>

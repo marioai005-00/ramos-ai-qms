@@ -1,3 +1,14 @@
+## 최신 수정 — 2026-10-02 예시 데이터 전체 제거
+
+- 지시: 예시로 등록된 자료와 그런 종류를 전부 지운다. 기준은 Case·접수에 기록된 값이 아닌데 측정값·판정·완료·금액처럼 보이는 것.
+- 코드: D4 공식 보고서의 고정 5-Why·Fishbone·FA 결과와 직접 그린 Decap/X-ray/SEM/I-V 그림, Workspace 점검 패널의 고정 성공 문구, D3 봉쇄 플랜의 LGE 평택 고정 시나리오와 서버 프롬프트, 송부 전 점검의 96점·고정 판정문, 외주 접수 감사의 파일명 기반 점수, SLA 화면의 "A+·위반 0건" 문구를 제거하고 실제 기록 상태를 보여 주도록 바꿨다.
+- 삭제한 화면: CoQ 시뮬레이터, 외주사 구상 청구서, 고객 지연 양해 공문, 가짜 문서 뷰어(doc_viewer.js), 교육용 프리셋, 예시 Case 전용 분기. 전부 가정값·고정 문장으로만 동작했다. SLA 계산·타임라인·헤더 타이머는 유지.
+- 삭제한 파일: 루트 스크린샷 26개, backups/checkpoint_20260909_gold_baseline(+zip), restore_checkpoint.bat, scripts/restore_checkpoint.py, SNAPSHOT_INFO.md, tests/test_supplier_portal_e2e.cjs. 체크포인트는 Git 밖이라 16번에서 되돌릴 수 없으나 11_..._BASELINE_20260916_132525/backups에 같은 사본이 있다.
+- 유지: input/의 회사 원본 엑셀, 조직도·담당자 배정 규칙, 고객사별 SLA 규칙, tests/fixtures, data/qms.sqlite3(계정만 있고 업무 기록 0건).
+- 함께 고친 것: 외주 Issue 접수의 FA 보고 기한 입력을 날짜 선택으로 바꿨다. 기존 안내문은 "2026-09-09 12:00" 형식을 예로 들었는데 서버는 날짜만 받아 접수가 거부될 수 있었다.
+- 검증: 임시 DB에서 Python 87건 통과. 실제 브라우저(임시 DB)에서 메뉴 15개와 8D 단계 9개 화면이 오류 없이 열리고 예시 표지어가 없음을 확인. tests/*.cjs는 실행하지 않았다.
+- 자료: docs/EXAMPLE_DATA_REMOVAL_20261002.md, tests/test_no_client_approval.py의 예시 데이터 가드.
+
 ## 최신 수정 — 2026-10-02 D4~D8 근거 기반 초안 · 외주 접수 가져오기 · 외주사 현황 · Excel 보고서
 
 - D4~D8 근거 기반 초안: stage_drafts.py와 POST /__api__/qms/ai/stage-draft. 중앙에 저장된 Case, 연결된 외주 접수, 유사도 0.5 이상 종결 Case만 읽어 사실/추론/누락/제안을 분리해 돌려준다. 외부 AI를 쓰지 않으므로 .env 없이 동작한다. 원인 문장·측정값·판정·완료·승인·Evidence 칸은 만들지 않는다. D4는 필수 도구 5개의 분석 목적만 제안하고 비어 있는 칸에만 넣는다. D5~D8은 기존 "미확인 상태로 추가" 경로를 그대로 쓴다. 기존 외부 AI 초안 버튼은 "외부 AI 초안"으로 남겼다.

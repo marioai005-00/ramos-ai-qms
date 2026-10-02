@@ -70,7 +70,7 @@
           code: 'D6',
           name: 'Validation',
           isDone: !!(c.d6 && c.d6.validationTests && c.d6.validationTests.length > 0),
-          statusText: (c.d6 && c.d6.validationTests && c.d6.validationTests.length > 0) ? '🟢 효과 검증 (0 PPM)' : (curIdx >= 5 ? '🔴 누락 (검증 미실시)' : '⚪ 검증 대기'),
+          statusText: (c.d6 && c.d6.validationTests && c.d6.validationTests.length > 0) ? '🟢 검증 시험 등록' : (curIdx >= 5 ? '🔴 누락 (검증 미실시)' : '⚪ 검증 대기'),
           gapText: (c.d6 && c.d6.validationTests && c.d6.validationTests.length > 0) ? '' : (curIdx >= 5 ? 'HTOL/양산 실장 검증 누락' : '')
         },
         {

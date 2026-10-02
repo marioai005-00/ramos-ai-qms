@@ -19,21 +19,6 @@ function openStageReportPreview(stage) {
   if (window.lucide) lucide.createIcons();
 }
 
-function renderStageImplementationGuide(stage) {
-  const guides = {
-    D1:['조직도 기반 AI 역할 추천','잘못 배정한 CFT 인원 삭제','RACI 책임 확인','사람의 최종 구성 확정'],
-    D2:['5W2H 사실 입력','IS / IS NOT AI 비교 초안','행별 원본 사실 확인','표준 문제 정의문 승인'],
-    D3:['LOT 영향범위 설정','ERP RAK4·RAK5 분리 확인','공정/외주 WIP Evidence','봉쇄조치와 효과성 승인'],
-    D4:['25개 품질도구 라이브러리','Case 특성별 AI 도구 추천','도구별 분석 Evidence 문서','발생·유출·시스템 원인 Gate'],
-    D5:['영구대책 후보 비교','원인 제거율·비용·Risk 평가','PCA 선택 근거','ECN/PCN 연결'],
-    D6:['대책 적용 정보','Before / After 비교','신뢰성·양산 검증시험','0 Fail 효과성 확인'],
-    D7:['DFMEA·PFMEA·Control Plan 개정','표준문서 Revision 관리','유사 제품 위험 확인','수평전개 완료 추적'],
-    D8:['종결 필수조건 Checklist','단계별 Evidence 완결','내부 결재와 고객 송부','CFT 성과·감사 기록']
-  };
-  const items=guides[stage]||[];
-  return `<section class="stage-implementation-guide no-print"><header><span>IMPLEMENTED IN ${stage}</span><strong>이 단계에서 확인할 기능</strong></header><div>${items.map((item,index)=>`<p><b>${String(index+1).padStart(2,'0')}</b>${item}</p>`).join('')}</div></section>`;
-}
-
 function reportEmpty(value, fallback='작성 대기') { return (value === 0 ? '0' : value) || `<span class="stage-report-empty">${fallback}</span>`; }
 function reportRows(rows, emptyCols, mapper) { return rows?.length ? rows.map(mapper).join('') : `<tr><td colspan="${emptyCols}" class="stage-report-empty">등록된 내용 없음</td></tr>`; }
 
@@ -45,7 +30,7 @@ function renderStageReportPreview(c, stage) {
     D7:['Prevent Recurrence','표준 개정과 수평전개'], D8:['Closure & Recognition','최종 승인과 종결']
   }[stage] || ['8D Report','단계 미선택'];
   return `<article class="stage-report-paper">
-    <div class="stage-report-watermark">${c.isExampleCase?'SAMPLE · TRAINING DATA':'DRAFT · HUMAN APPROVAL REQUIRED'}</div>
+    <div class="stage-report-watermark">DRAFT · HUMAN APPROVAL REQUIRED</div>
     <table class="stage-report-head"><tr><td class="brand"><b>RAMOS</b><small>QUALITY MANAGEMENT SYSTEM</small></td><td><h1>${stage}. ${stageMeta[0]}</h1><p>${stageMeta[1]}</p></td><td><b>Report No.</b><span>${c.id}</span><b>Status</b><span>${c.status}</span></td></tr></table>
     <table class="stage-report-summary"><tr><th>Customer</th><td>${c.customer}</td><th>Product / P.N</th><td>${c.product}<br>${c.partNumber}</td></tr><tr><th>LOT</th><td>${c.lotNumber}</td><th>Failure</th><td>${c.defectQty}/${Number(c.inspectQty||0).toLocaleString()}ea · ${c.ppm} PPM</td></tr><tr><th>Symptom</th><td colspan="3">${c.claimTitle}</td></tr></table>
     ${renderStageReportSection(c,stage)}

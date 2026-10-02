@@ -1,5 +1,5 @@
 /* ========================================================================= */
-    /* MASTER DATA STORE & BENCHMARK CASES (PHILOSOPHY ALIGNED)                   */
+    /* MASTER DATA STORE                                                          */
     /* ========================================================================= */
     // User workspace starts empty; company master data is preserved separately.
     const STORAGE_KEY = 'AI_QMS_8D_DATA_V10_USER_WORKSPACE';
@@ -954,7 +954,7 @@
                 if (r.status === 'Under_Review') {
                   tasks.push({
                     caseId: r.ticketId,
-                    customer: r.targetProduct?.customer || 'LGE DTV',
+                    customer: r.targetProduct?.customer || '',
                     targetStage: 'supplier-portal',
                     stageCode: '성적서 심의',
                     urgency: 'high',
@@ -965,7 +965,7 @@
                 } else if (r.status === 'Approved') {
                   tasks.push({
                     caseId: r.ticketId,
-                    customer: r.targetProduct?.customer || 'LGE DTV',
+                    customer: r.targetProduct?.customer || '',
                     targetStage: 'supplier-portal',
                     stageCode: '승인 완료',
                     urgency: 'normal',
@@ -1120,7 +1120,7 @@
               stageCode: 'D3. Containment',
               urgency: 'high',
               isApproval: false,
-              title: `[긴급 재고 봉쇄] 평택공장 완제품 ERP 출하 락 및 원부자재 격리 조치 필요`,
+              title: `[D3 봉쇄] 재고 격리 범위와 봉쇄조치 확정 필요`,
               desc: `Lot ${c.lotNumber} 관련 창고 재고 및 협력사 입고분 100% 격리 현황을 확정하세요.`
             });
           }

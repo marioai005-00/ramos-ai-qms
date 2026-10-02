@@ -24,8 +24,8 @@ function renderActionsHubView(c) {
       stage: 'D4 Root Cause',
       stageBadge: 'badge-purple',
       title: `[${toolMeta?.name || tool.id}] ${tool.hypothesis || '가설 검증 및 실증 분석'}`,
-      owner: tool.owner || 'FA 담당',
-      due: '48h 이내',
+      owner: tool.owner || '-',
+      due: '-',
       completedAt: tool.artifact?.updatedAt || '-',
       status: tool.artifact?.humanConfirmed ? 'Verified' : (tool.status || 'Testing')
     });

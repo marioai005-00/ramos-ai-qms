@@ -61,7 +61,6 @@
       skipNextIntakeDraftSave = true;
     }
 
-    const INTAKE_PRESETS = {};
 
     const INTAKE_OWNER_CATALOG = [
       { id: 'sourcing-lead', name: 'John_Woo_우준수', position: '팀장_이사', dept: '전략소싱팀', email: 'johnwoo@ramostek.com', customerKeywords: [] },
@@ -241,7 +240,7 @@
               <div class="grid-3">
                 <div class="form-group">
                   <label class="form-label">고객사 <span class="required">*</span></label>
-                  <input type="text" id="formCustomer" name="customer" class="form-control" placeholder="예: LGE (LG전자)" required onchange="recommendIntakeOwnerFromForm()">
+                  <input type="text" id="formCustomer" name="customer" class="form-control" placeholder="고객사명" required onchange="recommendIntakeOwnerFromForm()">
                 </div>
                 <div class="form-group">
                   <label class="form-label">고객 담당자 <span class="required">*</span></label>
@@ -902,7 +901,7 @@
 라인 영향: ${lineStop}
 품질 판정: Severity ${finalSeverity}, 8D 발행 ${requires8D === 'yes' ? '발행 확정' : '미발행'}, 초동조치 SLA ${slaHours}시간, 주관부서 ${leadDept}
 
-위 사실 정보에 입각하여, 품질혁신팀 sjkim Master QA 관점에서 경영진 및 고객사(LGE)에 공식 보고할 엄격한 '품질 검토 종합 의견 및 8D 발행 판정 근거'를 4개 번호 항목으로 작성해 주세요.
+위 사실 정보에 입각하여, 품질 검토자 관점에서 경영진과 고객사에 보고할 엄격한 '품질 검토 종합 의견 및 8D 발행 판정 근거'를 4개 번호 항목으로 작성해 주세요.
           `.trim();
 
           const aiRes = await RamosDualAI.query({
@@ -1149,26 +1148,6 @@
       recommendIntakeOwnerFromForm();
     }
 
-    function setIntakeFormFromPreset(p) {
-      if (!p) return;
-      document.getElementById('formCustomer').value = p.customer;
-      document.getElementById('formCustomerContact').value = p.customerContact;
-      document.getElementById('formCustomerEmail').value = p.customerEmail;
-      document.getElementById('formProduct').value = p.product;
-      document.getElementById('formPartNumber').value = p.partNumber;
-      document.getElementById('formLotNumber').value = p.lotNumber;
-      document.getElementById('formMfgSite').value = p.mfgSite;
-      document.getElementById('formIncidentSite').value = p.incidentSite;
-      document.getElementById('inputDefectQty').value = p.defectQty;
-      document.getElementById('inputInspectQty').value = p.inspectQty;
-      document.getElementById('formClaimTitle').value = p.claimTitle;
-      document.getElementById('formLineStop').value = p.lineStop;
-      document.getElementById('formSafetyRisk').value = p.safetyRisk;
-      document.getElementById('formRecurrentDefect').value = p.recurrentDefect;
-      calculatePPM();
-      autoEvaluateSeverity();
-    }
-
     function readSelectedIntakeOwner() {
       const fixedOwner = getFixedIntakeOwner(document.getElementById('formProduct')?.value || '');
       if (fixedOwner) {
@@ -1225,28 +1204,6 @@
       }
       const owner = readSelectedIntakeOwner();
       updateIntakeRoutingUI(owner, '사용자가 조직도 후보에서 담당자를 직접 확인·변경함');
-    }
-
-    function applyIntakePreset(presetKey) {
-      const p = INTAKE_PRESETS[presetKey];
-      if (!p) return;
-
-      intakeFiles = [{
-        name: p.sampleFileName,
-        size: '1.4 MB',
-        fileObj: null
-      }];
-      renderAttachedFilesList();
-      setIntakeFormFromPreset(p);
-      recommendIntakeOwnerFromForm();
-
-      const notif = document.getElementById('aiParseNotification');
-      const notifText = document.getElementById('aiParseNotificationText');
-      if (notif && notifText) {
-        notifText.innerText = `[${p.customer}] 교육용 프리셋 (${p.sampleFileName})을 적용했습니다. 실제 문서 추출 결과가 아니므로 모든 값을 확인해 주세요.`;
-        notif.style.display = 'flex';
-      }
-      saveIntakeDraft();
     }
 
     function parseRawTextIntoForm(text) {

@@ -186,7 +186,6 @@
         <div class="stage-progress-bar" style="margin-bottom: 12px;">
           ${stepsHTML}
         </div>
-        ${c.isExampleCase && stage !== 'overview' ? renderStageImplementationGuide(stage) : ''}
 
         <!-- 3-Pane Grid: Left/Center Workspace (Pane 1 & 3) vs Right AI Side-Panel (Pane 2) -->
         <div class="stage-workspace-grid">
@@ -1643,8 +1642,8 @@ function getLotPrefixAndSeq(lotStr = '') {
     <p>라모스는 자체 제조라인이 없으므로 GOC(자원운영·외주운영), 전략소싱(영업·CS), 개발(FA)이 100% 실명으로 역할을 분담합니다.</p>
   </div>
   <div class="inline-action-group">
-    <button type="button" class="btn btn-primary btn-sm" onclick="generateD3ContainmentPlan()" title="사내 조직도(조철민, 김혜원, 남서현, 이하영, 박재환) 기반 5대 봉쇄조치 자동 편성" style="box-shadow:0 0 10px rgba(59,130,246,0.35);">
-      <i data-lucide="sparkles" style="width:13px;height:13px;"></i> ✨ AI 봉쇄 플랜 자동 수립
+    <button type="button" class="btn btn-primary btn-sm" onclick="generateD3ContainmentPlan()" title="Case에 기록된 사실로 봉쇄조치 제안 목록을 만듭니다" style="box-shadow:0 0 10px rgba(59,130,246,0.35);">
+      <i data-lucide="sparkles" style="width:13px;height:13px;"></i> 봉쇄조치 제안 불러오기
     </button>
     <button type="button" class="btn btn-secondary btn-sm" onclick="addD3ContainmentAction()">
       <i data-lucide="plus" style="width:13px;height:13px;"></i> 수기 추가
@@ -1730,147 +1729,25 @@ function getLotPrefixAndSeq(lotStr = '') {
     }
 
 
+    // Proposals come from the server's rule-based draft, which uses only the facts recorded on the Case.
     async function generateD3ContainmentPlan() {
       const c = getActiveCase();
       if (!c) return;
       const d3 = captureD3Form(c);
-
-      if (d3.actions.length > 0 && d3.actions.some(a => a.action || a.target)) {
-        if (!confirm('기존에 입력된 긴급 봉쇄조치를 실제 조직도(조철민 그룹장, 김혜원 Pro, 남서현 Pro, 이하영 Pro, 박재환 팀장) 기반의 AI 추천 플랜으로 교체하시겠습니까?')) return;
+      if (d3.actions.some(a => a.action || a.target) && !confirm('입력된 봉쇄조치를 제안 목록으로 교체하시겠습니까? 기존 내용은 사라집니다.')) return;
+      let draft;
+      try {
+        draft = await QMSApi.generateD1D3Draft(c);
+      } catch (error) {
+        alert(`봉쇄조치 제안을 만들지 못했습니다. 기존 내용은 유지됩니다. ${error.message}`);
+        return;
       }
-
-      const btn = document.querySelector('button[onclick="generateD3ContainmentPlan()"]');
-      if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<span class="agent-pulse" style="width:6px;height:6px;"></span> 🧠 Groq ⚡ LPU 봉쇄 플랜 수립 중...';
-      }
-
-      const customer = c.customer || 'LGE (LG전자 HE사업본부 DTV)';
-      const product = c.product || 'DTV eMMC 5.1 16GB (BGA153)';
-      const partNumber = c.partNumber || 'MMACGD8J0F-KV0AF0-TPAG';
-      const lotNumber = c.lotNumber || '0QH321200A02-LPAGA00';
-      const incidentSite = c.incidentSite || 'LGE 평택 DTV Main Board SMT 3라인';
-      const defectQty = c.defectQty || 12;
-      const ppm = c.ppm || 1200;
-
-      const userPrompt = `
-[품질 사고 정보]
-- 고객사: ${customer}
-- 제품명 / P/N: ${product} / ${partNumber}
-- 부적합 Lot No: #${lotNumber}
-- 발생 라인: ${incidentSite}
-- 불량 규모: ${defectQty}ea (${ppm.toLocaleString()} PPM, 라인 정지 위험)
-- 회사 특성: 라모스테크놀러지는 자체 제조라인이 없는 Fabless/모듈 회사임.
-- 필수 배속 담당자:
-  1) 사내 창고(RAK4/5) 및 CTST MES 재공: 조철민 그룹장_P.Pro (자원운영그룹)
-  2) TechL 외주 가공처 SMT/공정 통제: 김혜원 Pro (외주운영그룹)
-  3) In-Transit 운송 트럭 회차/물류: 남서현 Pro (전략소싱팀 LGE 영업)
-  4) LGE 평택 라인 투입 중지 공문: 이하영 Pro (전략소싱팀 LGE CS)
-  5) 현장 0.8Ω 저항 전기 선별 지원: 박재환 팀장_S.Pro (Flash개발2팀 FA Lead)
-
-위 사실을 바탕으로 실행 가능한 5대 긴급 봉쇄조치(ICA) JSON 배열을 생성하세요.
-      `.trim();
-
-      let generatedActions = null;
-
-      if (typeof RamosDualAI !== 'undefined') {
-        try {
-          const aiRes = await RamosDualAI.query({
-            task: 'd3_containment_actions',
-            prompt: userPrompt,
-            engine: 'groq'
-          });
-
-          if (aiRes && aiRes.success && aiRes.text) {
-            let cleanJson = aiRes.text.trim();
-            if (cleanJson.includes('```json')) {
-              cleanJson = cleanJson.split('```json')[1].split('```')[0].trim();
-            } else if (cleanJson.includes('```')) {
-              cleanJson = cleanJson.split('```')[1].split('```')[0].trim();
-            }
-            const parsed = JSON.parse(cleanJson);
-            if (Array.isArray(parsed) && parsed.length >= 3) {
-              generatedActions = parsed.map((item, idx) => ({
-                id: item.id || `ICA-${String(idx+1).padStart(2,'0')}`,
-                target: item.target || '',
-                action: item.action || '',
-                owner: item.owner || '',
-                due: item.due || new Date(Date.now() + (idx+1)*3600*1000*2).toISOString().replace('T',' ').slice(0,16),
-                status: item.status || 'Open',
-                result: item.result || '',
-                completion: item.completion || ''
-              }));
-            }
-          }
-        } catch (err) {
-          console.warn('AI D3 Containment Plan error, applying real org fallback:', err);
-        }
-      }
-
-      // 100% Real Company Org-Structure Fallback (조철민, 김혜원, 남서현, 이하영, 박재환)
-      if (!generatedActions || !generatedActions.length) {
-        const now = new Date();
-        const fmtDue = (h) => new Date(now.getTime() + h*3600*1000).toISOString().replace('T',' ').slice(0,16);
-
-        generatedActions = [
-          {
-            id: 'ICA-01',
-            target: '사내 창고 (RAK4/5) & CTST 재공',
-            action: 'ERP 완제품 출하 전면 잠금(Shipment Lock) 등록 및 CTST MES 재공품 전량 HOLD 태그 부착',
-            owner: '조철민 그룹장_P.Pro (자원운영그룹)',
-            due: fmtDue(2),
-            status: 'Open',
-            result: 'ERP RAK4 1,675ea 출하 잠금 전산 등록',
-            completion: ''
-          },
-          {
-            id: 'ICA-02',
-            target: '외주 가공처 (TechL 라인)',
-            action: 'TechL 외주 SMT/TEST 공정 작업 즉시 중지(Line Hold) 및 SHORT TEST 잔여품 격리 통보',
-            owner: '김혜원 Pro (외주운영그룹)',
-            due: fmtDue(4),
-            status: 'Open',
-            result: 'TechL 라인스톱 및 공정 락 접수증',
-            completion: ''
-          },
-          {
-            id: 'ICA-03',
-            target: '운송 중 물류 (In-Transit)',
-            action: '평택행 출하 트럭 송장 추적 및 운송사 유선 통보하여 오창 입고창고 회차 지시',
-            owner: '남서현 Pro (전략소싱팀 LGE 영업)',
-            due: fmtDue(4),
-            status: 'Open',
-            result: '운송사 통화 확인 및 회차 접수증',
-            completion: ''
-          },
-          {
-            id: 'ICA-04',
-            target: '고객사 (LGE 평택 DTV 라인)',
-            action: 'LGE 평택 DTV SMT 3라인 실장 투입 즉시 중단 공문 발송 및 고객 창고 재고 격리 요청',
-            owner: '이하영 Pro (전략소싱팀 LGE CS)',
-            due: fmtDue(4),
-            status: 'Open',
-            result: 'LGE DTV 품질팀 공문 접수 및 투입 차단 메일',
-            completion: ''
-          },
-          {
-            id: 'ICA-05',
-            target: '고객사 현장 전기 선별',
-            action: 'LGE 평택 공장 현장 CS 급파, VCC-VSS 저항 0.8Ω 단락 선별 지그 투입하여 실장 모듈 100% 전수 검사',
-            owner: '박재환 팀장_S.Pro (Flash개발2팀 FA Lead)',
-            due: fmtDue(24),
-            status: 'Open',
-            result: 'LGE 평택 현장 100% 전기적 선별 성적서',
-            completion: ''
-          }
-        ];
-      }
-
-      d3.actions = generatedActions.map(action => ({...action, status:'Open', result:'', completion:''}));
+      const proposals = Array.isArray(draft?.d3?.actions) ? draft.d3.actions : [];
+      // Every proposal starts open with no owner, due date or result; the owner fills those in.
+      d3.actions = proposals.map((action, idx) => ({ id: action.id || `ICA-${String(idx + 1).padStart(2, '0')}`, target: action.target || '', action: action.action || '', owner: '', due: '', status: 'Open', result: '', completion: '' }));
       d3.approval = {...(d3.approval || {}), status:'Draft', humanConfirmed:false};
       saveAppData();
       renderCurrentView();
-
       if (window.lucide) lucide.createIcons();
     }
 
@@ -1960,7 +1837,6 @@ function getLotPrefixAndSeq(lotStr = '') {
       d4.analysisProfile = d4.analysisProfile || {failureMode:'unknown',pattern:'unknown',dataScope:'limited',productionModel:'outsourced',escapeConcern:'unknown'};
       d4.recommendations = Array.isArray(d4.recommendations) ? d4.recommendations : [];
       d4.selectedTools = Array.isArray(d4.selectedTools) ? d4.selectedTools : [];
-      if (c.isExampleCase && typeof createD4EvidenceArtifact === 'function') d4.selectedTools.forEach(row => { if (!row.artifact) row.artifact = createD4EvidenceArtifact(row.id,row,c,true); });
       const legacyCause = type => d4.candidateCauses.find(row => String(row.type || '').toLowerCase().includes(type.toLowerCase()));
       const makeCause = (type, legacy) => ({type,statement:legacy?.title || '',evidence:(legacy?.supportingEvidence || []).join(', '),contraryEvidence:legacy?.contradictingEvidence || '',validationMethod:'',status:legacy?.status === 'Confirmed' ? 'Confirmed' : 'Candidate',checks:{reproduced:false,removed:false,boundary:false,evidence:false}});
       d4.rootCauses = d4.rootCauses || {};
@@ -2078,80 +1954,24 @@ function getLotPrefixAndSeq(lotStr = '') {
     }
 
     function renderAISidePanelContent(c, stage) {
-      let checks = [];
-
-      if (stage === 'D1' || stage === 'overview') {
-        checks.push({
-          type: 'success',
-          title: 'CFT 인력 완전성 검증 완료',
-          desc: 'Champion, Leader, FA실, 제조기술, eMMC FW, 고객품질 전원 배정됨.'
-        });
-      }
-
-      if (stage === 'D2' || stage === 'overview') {
-        checks.push({
-          type: 'success',
-          title: 'Fact vs 가설 분리 검증',
-          desc: 'D2는 5W2H Fact 중심으로 기술되었으며, 가설(HYP-01~03)은 별도 관리 영역으로 격리됨.'
-        });
-        checks.push({
-          type: 'info',
-          title: '전기적 저항 측정치 정합성',
-          desc: 'VCC-VSS 간 0.8Ω 저항값과 과전류 차단(850mA) 현상이 완벽하게 일치함.'
-        });
-      }
-
-      if (stage === 'D3' || stage === 'overview') {
-        checks.push({
-          type: 'success',
-          title: '봉쇄 조치 완결성 (Completeness)',
-          desc: '당사 FG 45,000ea, 고객사 라인 10,000ea, 협력사 100,000ea 100% 봉쇄 완료.'
-        });
-        checks.push({
-          type: 'warning',
-          title: 'AI 안전 규칙 적용 알림',
-          desc: '증거 없는 "추가 유출 위험 0%" 대신 "확인된 Affected Lot 및 관리대상 재고에 대한 출하 차단·격리·선별 조치 완료" 표준 문구가 적용되었습니다.'
-        });
-      }
-
-      if (stage === 'D4' || stage === 'overview') {
-        const d4 = ensureD4Structure(c);
-        const verifiedTools = d4.selectedTools.filter(row => row.verified).length;
-        const confirmedCauses = ['Occurrence','Escape','System'].filter(type => d4.rootCauses[type]?.status === 'Confirmed').length;
-        checks.push({
-          type: isD4StageComplete(c) ? 'success' : 'warning',
-          title: isD4StageComplete(c) ? 'D4 Root Cause 사람 승인 완료' : 'D4 분석 증거 Gate 진행 중',
-          desc: `선택 도구 ${d4.selectedTools.length}개 중 ${verifiedTools}개 Evidence 확인 · 발생/유출/시스템 원인 ${confirmedCauses}/3개 Confirmed.`
-        });
-        checks.push({
-          type: 'info',
-          title: 'AI 품질도구 선택 원칙',
-          desc: '타임라인·Process Flow·Change Point·Fishbone·3-Track 5 Why는 필수이며 Case 특성에 따라 최대 4개 도구를 추가 추천합니다.'
-        });
-      }
-
-      if (stage === 'D5' || stage === 'D6' || stage === 'overview') {
-        checks.push({
-          type: 'success',
-          title: 'PCA 인과관계 & 유효성 검증',
-          desc: 'X7R 125℃ 부품 교체 후 HTOL 125℃ 504시간 231ea 전수 0 Defect PASS 달성.'
-        });
-      }
-
-      if (stage === 'D7' || stage === 'D8' || stage === 'overview') {
-        checks.push({
-          type: 'success',
-          title: '수평전개 & 재발방지 완결',
-          desc: '동일 부품 사용 중인 32GB 라인업 ECN 즉시 배포 및 DFMEA/PFMEA/CP 개정 완료.'
-        });
-      }
+      // Each check reflects the recorded state of the stage: approved, or what the review rules still require.
+      const stages = stage === 'overview' ? QUALITY_STAGES : (QUALITY_STAGES.includes(stage) ? [stage] : []);
+      const checks = stages.map(key => {
+        const approved = hasCurrentStageApproval(c, key);
+        const gap = approved ? '' : stageReviewError(c, key);
+        return {
+          type: approved ? 'success' : 'warning',
+          title: approved ? `${key} 결재 완료` : `${key} 확인 필요`,
+          desc: escapeWorkspaceValue(approved ? '현재 내용 기준으로 결재가 기록되어 있습니다.' : (gap || '작성 내용 점검을 통과했습니다. 단계 결재를 진행해 주세요.'))
+        };
+      });
 
       const currentTab = window._sidePanelTab || 'checks';
 
       return `
         <div class="ai-sidepanel-tabs" style="display:flex; gap:6px; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">
           <button type="button" class="btn btn-xs ${currentTab === 'checks' ? 'btn-primary' : 'btn-secondary'}" onclick="window._sidePanelTab='checks'; renderCurrentView();" style="flex:1; font-weight:700; font-size:0.7rem;">
-            <i data-lucide="shield-check" style="width:11px;height:11px;"></i> 실시간 품질 검증 (${checks.length})
+            <i data-lucide="shield-check" style="width:11px;height:11px;"></i> 단계 점검 (${checks.length})
           </button>
           <button type="button" class="btn btn-xs ${currentTab === 'logs' ? 'btn-primary' : 'btn-secondary'}" onclick="window._sidePanelTab='logs'; renderCurrentView();" style="flex:1; font-weight:700; font-size:0.7rem;">
             <i data-lucide="terminal" style="width:11px;height:11px;"></i> AI 실행 로그

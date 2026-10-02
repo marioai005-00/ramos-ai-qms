@@ -10,7 +10,7 @@
   
   const MULTI_AGENT_ROSTER = [
     { id: 'triage', name: 'Triage & CFT Matcher', short: 'Triage', icon: 'users', color: '#38bdf8', desc: '인사/조직도 기반 8대 CFT 최적 편성' },
-    { id: 'containment', name: 'Containment Guard', short: 'Containment', icon: 'shield-alert', color: '#f59e0b', desc: 'ERP/MES 7개 거점 60,000ea 재고 격리' },
+    { id: 'containment', name: 'Containment Guard', short: 'Containment', icon: 'shield-alert', color: '#f59e0b', desc: '영향 범위 확인과 봉쇄조치 제안' },
     { id: 'forensic', name: 'RootCause Forensic', short: 'Forensic', icon: 'microscope', color: '#a855f7', desc: '3-Track 5-Why 및 5대 도구 인과 규명' },
     { id: 'auditor', name: 'Compliance Auditor', short: 'Auditor', icon: 'file-check-2', color: '#10b981', desc: 'IATF 16949 감사 및 반려위험 진단' }
   ];
@@ -398,7 +398,7 @@
           <!-- Hero Banner -->
           ${renderQmsPageHeader({title:'AI 8D 미션 컨트롤',icon:isCompleted ? 'award' : 'bot',description:'3개 Sprint의 초안 진행 상태와 실제 담당자의 Gate 검토·승인을 확인합니다.',badges:[{label:statusText,tone:isCompleted ? 'success' : this.isExecuting ? 'info' : 'neutral'}],actions:`            <div class="hero-actions">
               <button type="button" class="btn btn-secondary btn-sm" onclick="window.ramosAgent.resetToCleanSlate()" title="D1~D8 데이터 백지로 리셋">
-                <i data-lucide="trash-2" style="width:13px;height:13px;"></i> 🧹 예시 데이터 전체 삭제
+                <i data-lucide="trash-2" style="width:13px;height:13px;"></i> 작성 내용 초기화
               </button>
 
               <label class="agent-toggle-label" title="화면 사용자 전환과 자동 결재가 차단된 운영 모드">
@@ -689,7 +689,7 @@
 
       saveAppData();
       this.logs = [];
-      this.log('🧹 [클린 슬레이트] 기존 D1~D8 예시 데이터가 모두 삭제되었습니다. 순수 클레임 접수 정보만 남은 깨끗한 상태에서 AI 자율 작성을 시작할 수 있습니다.', 'primary');
+      this.log('D1~D8 작성 내용을 초기화했습니다. 접수 정보만 남아 있습니다.', 'primary');
       renderCurrentView();
     }
 

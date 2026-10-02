@@ -180,7 +180,7 @@ function renderReportsHubView(c) {
       
       <!-- Watermark per Report Stage -->
       <div class="report-watermark">
-        ${c.isExampleCase ? 'SAMPLE · TRAINING DATA' : 'DRAFT · HUMAN REVIEW REQUIRED'}
+        DRAFT · HUMAN REVIEW REQUIRED
         ${reportType === 'initial' ? 'INITIAL 3D · ROOT CAUSE UNDER INVESTIGATION' : reportType === 'interim' ? 'INTERIM 5D' : 'FINAL 8D REVIEW'}
       </div>
 
