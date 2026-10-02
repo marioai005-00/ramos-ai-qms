@@ -844,7 +844,7 @@ async function handleSupplierFormSubmit(e) {
     ? getOfficialSupplierForUser(activeUser)
     : MASTER_SUPPLIERS.find(supplier => supplier.name === String(formData.get('companyName') || '').trim());
   if (!officialSupplier) {
-    alert('공식 외주사 TechL, WinPAC, SSPC, CTST 중에서 선택해 주세요.');
+    alert('공식 외주사 TechL, WinPAC, CTST 중에서 선택해 주세요.');
     return;
   }
 

@@ -13,7 +13,6 @@ const SUPPLIER_CATEGORIES = {
 const MASTER_SUPPLIERS = [
   { id: 'SUP-TECHL', username: 'thkwon', name: 'TechL', category: 'SMT_MODULE', plant: '', defaultContact: '권태훈 부장', email: 'thkwon@techl.co.kr', phone: '' },
   { id: 'SUP-WINPAC', username: 'yspark', name: 'WinPAC', category: 'OSAT_PKG', plant: '', defaultContact: '박영수 차장', email: 'yspark@winpac.co.kr', phone: '' },
-  { id: 'SUP-SSPC', username: 'sangwook.ki', name: 'SSPC', category: 'OSAT_PKG', plant: '', defaultContact: '기상욱 팀장', email: 'sangwook.ki@sfasemicon.com', phone: '' },
   { id: 'SUP-CTST', username: 'ojs', name: 'CTST', category: 'TEST_HOUSE', plant: '', defaultContact: '오재수 그룹장', email: 'ojs@ctst.co.kr', phone: '' }
 ];
 

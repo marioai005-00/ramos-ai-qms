@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="css/ui_consistency.css?v=20261002_uniform_v2">
   <link rel="stylesheet" href="css/internal_quality.css?v=20261002_supplier_notices_v1">
   <link rel="stylesheet" href="css/triage_result.css?v=20261002_triage_result_v3">
-  <link rel="stylesheet" href="css/stage_draft_supplier.css?v=20261002_features_v1">
+  <link rel="stylesheet" href="css/stage_draft_supplier.css?v=20261002_assembly_v1">
   <script>
     (function() {
       try {
@@ -91,9 +91,6 @@
           </button>
           <button type="button" class="quick-persona-chip" onclick="handleQuickLogin('yspark')" style="border-color:#f97316; background:rgba(249,115,22,0.12);" title="WinPAC 외주 협력사 담당자">
             <span>🏭 박영수 차장</span> <span style="font-size:0.65rem; color:#f97316; font-weight:700;">WinPAC</span>
-          </button>
-          <button type="button" class="quick-persona-chip" onclick="handleQuickLogin('sangwook.ki')" style="border-color:#f97316; background:rgba(249,115,22,0.12);" title="SSPC 외주 협력사 담당자">
-            <span>🏭 기상욱 팀장</span> <span style="font-size:0.65rem; color:#f97316; font-weight:700;">SSPC</span>
           </button>
           <button type="button" class="quick-persona-chip" onclick="handleQuickLogin('ojs')" style="border-color:#f97316; background:rgba(249,115,22,0.12);" title="CTST 외주 협력사 담당자">
             <span>🏭 오재수 그룹장</span> <span style="font-size:0.65rem; color:#f97316; font-weight:700;">CTST</span>
@@ -183,6 +180,9 @@
         </a>
         <a class="nav-item" id="nav-supplier-notices" onclick="switchNav('supplier-notices', this)">
           <i data-lucide="send" style="width:16px;height:16px;"></i><span>부적합 통보 관리</span>
+        </a>
+        <a class="nav-item" id="nav-assembly-defects" onclick="switchNav('assembly-defects', this)">
+          <i data-lucide="package-search" style="width:16px;height:16px;color:#f97316;"></i><span>제품별 조립 불량 관리</span>
         </a>
       </div>
 
@@ -453,7 +453,7 @@
 
   <!-- Modular JavaScript Architecture (Cache-Busting for Instant Live Updates) -->
   <script src="js/clean_start_migration.js?v=20261002_clean_start_v2"></script>
-  <script src="js/data.js?v=20261002_pruned_v1"></script>
+  <script src="js/data.js?v=20261002_assembly_v1"></script>
   <script src="js/org_tree.js?v=20261002_evidence_v1"></script>
   <script src="js/ai_engine.js?v=20260916_v2"></script>
   <script src="js/server_api.js?v=20261002_features_v1"></script>
@@ -473,16 +473,17 @@
   <script src="js/views/stage_preview.js?v=20261002_no_examples_v1"></script>
   <script src="js/late_stages.js?v=20261002_features_v1"></script>
   <script src="js/views/internal_ai_gatekeeper.js?v=20261002_no_examples_v1"></script>
-  <script src="js/supplier_data.js?v=20261002_pruned_v1"></script>
+  <script src="js/supplier_data.js?v=20261002_assembly_v1"></script>
   <script src="js/views/supplier_ai_audit.js?v=20261002_no_examples_v1"></script>
-  <script src="js/views/supplier_portal.js?v=20261002_no_examples_v1"></script>
+  <script src="js/views/supplier_portal.js?v=20261002_assembly_v1"></script>
   <script src="js/views/supplier_bridge.js?v=20261002_features_v1"></script>
   <script src="js/views/sla_coq_engine.js?v=20261002_pruned_v1"></script>
   <script src="js/views/autonomous_8d_agent.js?v=20261002_no_examples_v1"></script>
-  <script src="js/views/supplier_notices.js?v=20261002_supplier_notices_v2"></script>
+  <script src="js/views/supplier_notices.js?v=20261002_assembly_v1"></script>
+  <script src="js/views/assembly_defects.js?v=20261002_assembly_v1"></script>
   <script src="js/views/supplier_dashboard.js?v=20261002_features_v1"></script>
   <script src="js/views/internal_quality.js?v=20261002_internal_v2"></script>
   <script src="js/ui_readability.js?v=20261002_uniform_v2"></script>
-  <script src="js/app.js?v=20261002_features_v1"></script>
+  <script src="js/app.js?v=20261002_assembly_v1"></script>
 </body>
 </html>

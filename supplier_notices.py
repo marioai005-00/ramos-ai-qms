@@ -8,7 +8,6 @@ from internal_quality import encoded, now, fail
 SUPPLIERS = {
     "SUP-TECHL": {"id": "SUP-TECHL", "name": "TechL", "username": "thkwon", "contact": "권태훈 부장", "email": "thkwon@techl.co.kr", "category": "SMT_MODULE"},
     "SUP-WINPAC": {"id": "SUP-WINPAC", "name": "WinPAC", "username": "yspark", "contact": "박영수 차장", "email": "yspark@winpac.co.kr", "category": "OSAT_PKG"},
-    "SUP-SSPC": {"id": "SUP-SSPC", "name": "SSPC", "username": "sangwook.ki", "contact": "기상욱 팀장", "email": "sangwook.ki@sfasemicon.com", "category": "OSAT_PKG"},
     "SUP-CTST": {"id": "SUP-CTST", "name": "CTST", "username": "ojs", "contact": "오재수 그룹장", "email": "ojs@ctst.co.kr", "category": "TEST_HOUSE"},
 }
 

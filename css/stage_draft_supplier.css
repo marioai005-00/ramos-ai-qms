@@ -19,7 +19,8 @@
   .stage-draft-fact { border-left: 3px solid #10b981; }
   .stage-draft-proposal { border-left: 3px solid #2563eb; }
 
-  body.supplier-mode #nav-supplier-dashboard { display: none; }
+  body.supplier-mode #nav-supplier-dashboard, body.supplier-mode #nav-assembly-defects { display: none; }
+  .assembly-defects tr.ad-selected td { background: var(--bg-card-subtle); }
   .sq-section-title { margin: 0 0 10px; font-size: 0.95rem; }
   .sq-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; margin-top: 16px; }
   .sq-card { border: 1px solid var(--border); border-radius: 8px; padding: 16px; background: var(--bg-card); }

@@ -102,11 +102,12 @@ class SessionIdentity:
 from internal_quality import InternalQualityMixin
 from supplier_notices import SupplierNoticesMixin
 from supplier_tickets import SupplierSummaryMixin, SupplierTicketsMixin
+from assembly_defects import AssemblyDefectsMixin
 from report_export import ReportExportMixin
 from stage_drafts import StageDraftMixin
 
 
-class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin, SupplierSummaryMixin, StageDraftMixin, ReportExportMixin):
+class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin, SupplierSummaryMixin, AssemblyDefectsMixin, StageDraftMixin, ReportExportMixin):
     """Thread-safe SQLite store used by the local portal server."""
 
     def __init__(self, project_root: Path):
@@ -301,6 +302,7 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
             self._init_internal_quality(db)
             self._init_supplier_notices(db)
             self._init_supplier_tickets(db)
+            self._init_assembly_defects(db)
             self._seed_users(db)
 
     def _seed_users(self, db: sqlite3.Connection) -> None:
@@ -319,10 +321,9 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
             ("jh.choue66", "조장호", "대표이사", "대표이사", "jh.choue66@ramostek.com", ["stage_champion"]),
             ("thkwon", "권태훈", "부장", "TechL", "thkwon@techl.co.kr", ["supplier_user"]),
             ("yspark", "박영수", "차장", "WinPAC", "yspark@winpac.co.kr", ["supplier_user"]),
-            ("sangwook.ki", "기상욱", "팀장", "SSPC", "sangwook.ki@sfasemicon.com", ["supplier_user"]),
             ("ojs", "오재수", "그룹장", "CTST", "ojs@ctst.co.kr", ["supplier_user"]),
         ]
-        approved_supplier_usernames = ("thkwon", "yspark", "sangwook.ki", "ojs")
+        approved_supplier_usernames = ("thkwon", "yspark", "ojs")
         placeholders = ", ".join("?" for _ in approved_supplier_usernames)
         db.execute(
             f"""UPDATE users

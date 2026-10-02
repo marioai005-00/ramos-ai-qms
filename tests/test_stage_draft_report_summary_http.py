@@ -197,7 +197,7 @@ class StageDraftReportSummaryTests(unittest.TestCase):
         self.request("POST", f"/__api__/qms/supplier-tickets/{pcn['ticketId']}", {"action": "review", "decision": "Revision_Requested", "comment": "보완", "expectedRevision": pcn["revision"]}, self.internal)
         status, _, summary = self.request("GET", "/__api__/qms/supplier-summary", headers=self.internal)
         self.assertEqual(status, 200, summary)
-        self.assertEqual([s["name"] for s in summary["suppliers"]], ["TechL", "WinPAC", "SSPC", "CTST"])
+        self.assertEqual([s["name"] for s in summary["suppliers"]], ["TechL", "WinPAC", "CTST"])
         techl = summary["suppliers"][0]
         self.assertEqual(techl["tickets"], {"total": 4, "pcn": 1, "issue": 3, "awaitingReview": 3, "awaitingSupplier": 1, "approved": 0, "rejected": 0, "linkedTo8D": 0})
         self.assertEqual(techl["issueQuantities"], {"reportedTickets": 2, "defectQty": 4, "inputQty": 300, "defectRatePct": 1.3333})

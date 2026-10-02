@@ -830,22 +830,6 @@
         isMaster: false
       },
       {
-        username: 'sangwook.ki',
-        name: '기상욱',
-        position: '팀장',
-        dept: 'SSPC',
-        company: 'SSPC',
-        supplierId: 'SUP-SSPC',
-        supplierCategory: 'OSAT_PKG',
-        plant: '',
-        email: 'sangwook.ki@sfasemicon.com',
-        phone: '',
-        roleDesc: '외주 협력사 담당자 (SSPC)',
-        userType: 'SUPPLIER',
-        isSupplier: true,
-        isMaster: false
-      },
-      {
         username: 'ojs',
         name: '오재수',
         position: '그룹장',

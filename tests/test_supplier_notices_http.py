@@ -88,14 +88,14 @@ class SupplierNoticesHttpTests(unittest.TestCase):
     def test_auth_csrf_writer_and_supplier_creation_blocked(self):
         self.assertEqual(self.request("GET", self.route)[0], 401)
         self.assertEqual(self.request("POST", self.route, self.notice_payload(), {"Cookie":self.secure["Cookie"]})[0], 403)
-        for username in ["thkwon","yspark","sangwook.ki","ojs"]:
+        for username in ["thkwon","yspark","ojs"]:
             identity=self.login(username)
             self.assertEqual(self.request("POST", self.route, self.notice_payload(), identity)[0], 403)
         record=self.create_notice()
         self.assertEqual(self.update_notice(record, "publish", self.login("jhpark"))[0], 403)
 
     def test_all_four_recipients_scope_drafts_and_originals(self):
-        mapping={"SUP-TECHL":"thkwon","SUP-WINPAC":"yspark","SUP-SSPC":"sangwook.ki","SUP-CTST":"ojs"}
+        mapping={"SUP-TECHL":"thkwon","SUP-WINPAC":"yspark","SUP-CTST":"ojs"}
         records={}
         for sid,username in mapping.items():
             r=self.create_notice(supplierId=sid,files=[self.evidence_file()]);identity=self.login(username)

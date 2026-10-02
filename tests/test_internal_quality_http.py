@@ -80,7 +80,7 @@ class InternalQualityHttpTests(unittest.TestCase):
         self.assertEqual(self.request("GET", route)[0], 401)
         self.assertEqual(self.request("POST", route, self.payload(), {"Cookie": self.secure["Cookie"]})[0], 403)
         record = self.create()
-        for username in ("thkwon", "yspark", "sangwook.ki", "ojs"):
+        for username in ("thkwon", "yspark", "ojs"):
             external = self.login(username)
             self.assertEqual(self.request("GET", route, headers=external)[0], 403)
             self.assertEqual(self.request("GET", route+'/'+record["ticketId"], headers=external)[0], 403)

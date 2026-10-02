@@ -160,7 +160,6 @@ class QMSStoreTests(unittest.TestCase):
         expected = {
             "thkwon": ("권태훈", "TechL", "thkwon@techl.co.kr"),
             "yspark": ("박영수", "WinPAC", "yspark@winpac.co.kr"),
-            "sangwook.ki": ("기상욱", "SSPC", "sangwook.ki@sfasemicon.com"),
             "ojs": ("오재수", "CTST", "ojs@ctst.co.kr"),
         }
         for username, (name, company, email) in expected.items():
@@ -170,6 +169,8 @@ class QMSStoreTests(unittest.TestCase):
             self.assertEqual(identity["email"], email)
         with self.assertRaises(QMSApiError):
             self.store.authenticate("mwpark", "1")
+        with self.assertRaises(QMSApiError):
+            self.store.authenticate("sangwook.ki", "1")
 
 
 if __name__ == "__main__":
