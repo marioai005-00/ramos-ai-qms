@@ -557,6 +557,16 @@
       return queue.filter(item => item.intakeRouting?.registeredBy?.email === user?.email);
     }
 
+    // The 3D clock (24 hours) runs from submission, so the queue shows how much of it is left.
+    function renderIntakeSlaRemaining(item) {
+      if (!['Quality Review Pending', 'Quality Review In Progress', 'Revision Requested'].includes(item.status)) return '';
+      const submitted = new Date(String(item.submittedAt || '').replace(' ', 'T'));
+      if (Number.isNaN(submitted.getTime())) return '';
+      const hours = (submitted.getTime() + 24 * 3600000 - Date.now()) / 3600000;
+      const tone = hours < 0 ? 'danger' : hours <= 4 ? 'warn' : 'neutral';
+      return `<span class="qms-status-chip qms-tone-${tone}">3D 기한 ${hours < 0 ? Math.abs(hours).toFixed(1) + 'h 초과' : hours.toFixed(1) + 'h 남음'}</span>`;
+    }
+
     function renderIntakeStatusBadge(status) {
       const statusMap = {
         'Quality Review Pending': ['검토 대기', 'is-pending'],
@@ -611,6 +621,7 @@
                     <strong>${item.customer}</strong>
                     <small>${item.product} · ${item.submittedAt}</small>
                     ${renderIntakeStatusBadge(item.status)}
+                    ${renderIntakeSlaRemaining(item)}
                   </button>
                 `).join('')}
               </aside>

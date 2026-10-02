@@ -906,7 +906,7 @@ class AgentRuntime:
             try:
                 if job["job_type"] == "SLA_WATCHDOG":
                     record = self.store.get_state()
-                    if not record or not record["state"].get("cases"):
+                    if not record or not (record["state"].get("cases") or record["state"].get("intakeQueue")):
                         result = {"jobType": job["job_type"], "status": "SKIPPED", "reason": "NO_CASES"}
                     else:
                         bucket = datetime.now(UTC).strftime("%Y%m%d%H%M")

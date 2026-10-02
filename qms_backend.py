@@ -820,25 +820,23 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
             "L2_CRITICAL": ["quality_reviewer", "stage_leader", "case_facilitator"],
             "L3_OVERDUE": ["stage_champion", "quality_reviewer", "system_admin"],
         }
+        # An intake still waiting for quality review is not a Case yet, but its 3D clock already runs
+        # from the moment it was submitted, so it is watched too.
+        intake_recipient_roles = {
+            "L1_ATTENTION": ["quality_reviewer"],
+            "L2_CRITICAL": ["quality_reviewer", "case_facilitator"],
+            "L3_OVERDUE": ["quality_reviewer", "stage_champion", "system_admin"],
+        }
+        waiting_statuses = {"Quality Review Pending", "Quality Review In Progress", "Revision Requested"}
+        intakes = [item for item in record["state"].get("intakeQueue", []) if isinstance(item, dict) and item.get("intakeId")]
+        intake_ids = {str(item["intakeId"]) for item in intakes}
         with self._lock, self._connect() as db:
-            for case in record["state"].get("cases", []):
-                if case.get("status") == "Closed":
-                    continue
-                base = parse_time(case.get("receiptDate") or case.get("createdAt"))
-                if not base:
-                    continue
-                d3_hours, d5_days, d8_days = rule_for(case)
-                gates = case.get("gates", {})
-                milestones = [
-                    ("D3", base + timedelta(hours=d3_hours), parse_time(gates.get("gate3D", {}).get("dispatchDate")), d3_hours),
-                    ("D5", base + timedelta(days=d5_days), parse_time(gates.get("gate5D", {}).get("dispatchDate")), d5_days * 24),
-                    ("D8", base + timedelta(days=d8_days), parse_time(gates.get("gate8D", {}).get("dispatchDate") or case.get("closedAt")), d8_days * 24),
-                ]
+            def watch(target_id: str, milestones: list, roles: dict[str, list[str]], prefix: str) -> None:
                 for milestone, due, completed, window_hours in milestones:
                     if completed:
                         db.execute(
                             "UPDATE sla_escalations SET status='RESOLVED', resolved_at=? WHERE case_id=? AND milestone=? AND status='OPEN'",
-                            (utc_now(), case.get("id"), milestone),
+                            (utc_now(), target_id, milestone),
                         )
                         continue
                     remaining = (due - now).total_seconds() / 3600
@@ -851,23 +849,45 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
                         level = "L1_ATTENTION"
                     else:
                         continue
-                    reason = f"{milestone} SLA {'기한 초과' if remaining < 0 else '기한 임박'} ({remaining:.1f}h)"
+                    reason = f"{prefix}{milestone} SLA {'기한 초과' if remaining < 0 else '기한 임박'} ({remaining:.1f}h)"
                     db.execute(
                         """UPDATE sla_escalations
                            SET status='SUPERSEDED', resolved_at=?
                            WHERE case_id=? AND milestone=? AND status='OPEN' AND level<>?""",
-                        (utc_now(), case.get("id"), milestone, level),
+                        (utc_now(), target_id, milestone, level),
                     )
                     cursor = db.execute(
                         """INSERT OR IGNORE INTO sla_escalations
                            (case_id, milestone, level, status, reason, due_at, remaining_hours,
                             recipient_roles_json, created_at)
                            VALUES (?, ?, ?, 'OPEN', ?, ?, ?, ?, ?)""",
-                        (case.get("id"), milestone, level, reason, due.isoformat(timespec="seconds"),
-                         remaining, canonical_json(recipient_roles[level]), utc_now()),
+                        (target_id, milestone, level, reason, due.isoformat(timespec="seconds"),
+                         remaining, canonical_json(roles[level]), utc_now()),
                     )
                     if cursor.rowcount:
-                        self._audit(db, identity.user["id"], identity.user["username"], "SLA_ESCALATED", "case_milestone", f"{case.get('id')}:{milestone}", details={"level": level, "remainingHours": round(remaining, 2), "externalNotification": False})
+                        self._audit(db, identity.user["id"], identity.user["username"], "SLA_ESCALATED", "case_milestone", f"{target_id}:{milestone}", details={"level": level, "remainingHours": round(remaining, 2), "externalNotification": False})
+
+            for case in record["state"].get("cases", []):
+                if case.get("status") == "Closed":
+                    continue
+                base = parse_time(case.get("receiptDate") or case.get("createdAt"))
+                if not base:
+                    continue
+                d3_hours, d5_days, d8_days = rule_for(case)
+                gates = case.get("gates", {})
+                watch(str(case.get("id")), [
+                    ("D3", base + timedelta(hours=d3_hours), parse_time(gates.get("gate3D", {}).get("dispatchDate")), d3_hours),
+                    ("D5", base + timedelta(days=d5_days), parse_time(gates.get("gate5D", {}).get("dispatchDate")), d5_days * 24),
+                    ("D8", base + timedelta(days=d8_days), parse_time(gates.get("gate8D", {}).get("dispatchDate") or case.get("closedAt")), d8_days * 24),
+                ], recipient_roles, "")
+            for item in intakes:
+                intake_id = str(item["intakeId"])
+                base = parse_time(item.get("submittedAt"))
+                if item.get("status") not in waiting_statuses or not base:
+                    # Approved intakes continue under their Case; rejected ones no longer have a deadline.
+                    db.execute("UPDATE sla_escalations SET status='RESOLVED', resolved_at=? WHERE case_id=? AND status='OPEN'", (utc_now(), intake_id))
+                    continue
+                watch(intake_id, [("D3", base + timedelta(hours=24.0), None, 24.0)], intake_recipient_roles, "품질 검토 대기 · ")
             rows = db.execute(
                 "SELECT * FROM sla_escalations WHERE status='OPEN' ORDER BY CASE level WHEN 'L3_OVERDUE' THEN 1 WHEN 'L2_CRITICAL' THEN 2 ELSE 3 END, due_at ASC"
             ).fetchall()
@@ -876,6 +896,7 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
                 "level": row["level"], "status": row["status"], "reason": row["reason"],
                 "dueAt": row["due_at"], "remainingHours": row["remaining_hours"],
                 "recipientRoles": json.loads(row["recipient_roles_json"]), "createdAt": row["created_at"],
+                "targetType": "intake" if row["case_id"] in intake_ids else "case",
                 "externalNotification": False,
             } for row in rows]
 

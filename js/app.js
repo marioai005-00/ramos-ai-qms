@@ -306,9 +306,12 @@ function getServerEscalationTasks(user = CURRENT_USER) {
     .filter(item => user?.isMaster || (item.recipientRoles || []).some(role => roles.has(role)))
     .map(item => ({
       caseId:item.caseId,
-      customer:(appData.cases || []).find(c => c.id === item.caseId)?.customer || '',
-      targetStage:'reports-hub',
-      gateKey:{D3:'gate3D',D5:'gate5D',D8:'gate8D'}[item.milestone],
+      customer:(item.targetType === 'intake'
+        ? (appData.intakeQueue || []).find(q => q.intakeId === item.caseId)
+        : (appData.cases || []).find(c => c.id === item.caseId))?.customer || '',
+      // A deadline on an intake that is still waiting for review opens the review queue, not a report.
+      targetStage:item.targetType === 'intake' ? 'intake-triage' : 'reports-hub',
+      gateKey:item.targetType === 'intake' ? '' : {D3:'gate3D',D5:'gate5D',D8:'gate8D'}[item.milestone],
       stageCode:`${item.milestone} SLA`,
       urgency:item.level === 'L3_OVERDUE' ? 'critical' : 'high',
       isApproval:false,

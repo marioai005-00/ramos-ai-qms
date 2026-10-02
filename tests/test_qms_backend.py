@@ -156,6 +156,28 @@ class QMSStoreTests(unittest.TestCase):
         self.assertFalse(any(item["caseId"] == "CASE-LATE" and item["milestone"] == "D3" for item in remaining))
 
 
+    def test_intake_waiting_for_review_is_watched_until_it_is_decided(self):
+        from datetime import datetime, timedelta, timezone
+        kst = timezone(timedelta(hours=9))
+        stamp = lambda hours: (datetime.now(kst) - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M")
+        late = {"intakeId": "INT-LATE", "status": "Quality Review Pending", "customer": "LG전자", "submittedAt": stamp(30)}
+        fresh = {"intakeId": "INT-NEW", "status": "Quality Review Pending", "customer": "LG전자", "submittedAt": stamp(1)}
+        half = {"intakeId": "INT-HALF", "status": "Quality Review In Progress", "customer": "LG전자", "submittedAt": stamp(14)}
+        self.store.save_state(self.identity, {"cases": [], "intakeQueue": [late, fresh, half]}, 0, "intake sla")
+        events = {item["caseId"]: item for item in self.store.evaluate_sla_escalations(self.identity)}
+        self.assertEqual(set(events), {"INT-LATE", "INT-HALF"})
+        self.assertEqual((events["INT-LATE"]["level"], events["INT-LATE"]["milestone"], events["INT-LATE"]["targetType"]), ("L3_OVERDUE", "D3", "intake"))
+        self.assertIn("품질 검토 대기", events["INT-LATE"]["reason"])
+        self.assertIn("quality_reviewer", events["INT-LATE"]["recipientRoles"])
+        self.assertEqual(events["INT-HALF"]["level"], "L1_ATTENTION")
+        self.assertFalse(events["INT-LATE"]["externalNotification"])
+        # Evaluating again does not create a second record for the same level.
+        self.assertEqual(len(self.store.evaluate_sla_escalations(self.identity)), 2)
+        late["status"] = "Approved"
+        half["status"] = "Rejected"
+        self.store.save_state(self.identity, {"cases": [], "intakeQueue": [late, fresh, half]}, 1, "decided")
+        self.assertEqual(self.store.evaluate_sla_escalations(self.identity), [])
+
     def test_only_approved_supplier_accounts_are_active(self):
         expected = {
             "thkwon": ("권태훈", "TechL", "thkwon@techl.co.kr"),
