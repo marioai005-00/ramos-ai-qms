@@ -319,7 +319,9 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
         demo_password = os.environ.get("QMS_DEMO_PASSWORD", "1")
         now = utc_now()
         seeds = [
-            ("sjkim", "김성중", "Senior Pro", "품질혁신팀", "sjkim@ramostek.com", ["system_admin", "quality_reviewer", "case_facilitator", "customer_dispatcher"]),
+            # The administrator is a separate account; staff accounts carry only their working roles (user decision 2026-10-02).
+            ("master", "시스템 관리자", "Master", "QMS 관리", "master@qms.local", ["system_admin"]),
+            ("sjkim", "김성중", "Senior Pro", "품질혁신팀", "sjkim@ramostek.com", ["quality_reviewer", "case_facilitator", "customer_dispatcher"]),
             ("hskim", "김현수", "실장_상무", "Flash 개발실", "hskim@ramostek.com", ["stage_leader"]),
             ("jhpark", "박재환", "팀장_S.Pro", "Flash 개발2팀", "jhpark@ramostek.com", ["stage_drafter"]),
             ("eunsan.lee", "이은산", "센터장_상무", "제조기획센터", "eunsan.lee@ramostek.com", ["stage_drafter"]),

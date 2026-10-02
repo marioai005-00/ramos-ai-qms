@@ -122,7 +122,8 @@ class AgentRuntimeTests(unittest.TestCase):
         with self.assertRaises(QMSApiError) as caught:
             self.runtime.decide_run(self.identity, run["id"], "APPROVE", {"comment": "일반 승인 시도입니다."})
         self.assertEqual(caught.exception.code, "CRITICAL_FINDING_OPEN")
-        approved = self.runtime.decide_run(self.identity, run["id"], "APPROVE", {
+        _, token, _ = self.store.authenticate("master", "1")
+        approved = self.runtime.decide_run(self.store.resolve_session(token), run["id"], "APPROVE", {
             "comment": "관리자 전결 검증 승인",
             "overrideReason": "고객 라인 정지로 즉시 격리가 필요하여 위험을 인지하고 전결합니다.",
         })

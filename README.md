@@ -66,7 +66,8 @@ python -m unittest discover -s tests -p "test_*.py"
 
 | 계정 | 역할 |
 |---|---|
-| `sjkim` | 시스템 관리자·품질 검토 |
+| `master` | 시스템 관리자 (Master): 삭제, 결재 전결 |
+| `sjkim` | 품질 검토·접수 승인·보고서 송부 |
 | `jhpark`, `eunsan.lee` | 단계 기안 |
 | `hskim`, `gh8229` | Leader |
 | `sahwang` | Champion |

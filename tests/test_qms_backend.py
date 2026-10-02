@@ -19,6 +19,8 @@ class QMSStoreTests(unittest.TestCase):
         self.store = QMSStore(Path(self.temp.name))
         _, token, _ = self.store.authenticate("sjkim", "1")
         self.identity = self.store.resolve_session(token)
+        _, token, _ = self.store.authenticate("master", "1")
+        self.admin = self.store.resolve_session(token)
 
     def tearDown(self):
         self.env.stop()
@@ -79,7 +81,7 @@ class QMSStoreTests(unittest.TestCase):
         """Sign-off history backed by real server approval events for all three roles."""
         sign = {"status": "Approved", "snapshot": snapshot}
         for role, decision in (("drafter", "SUBMITTED"), ("leader", "APPROVED"), ("champion", "APPROVED")):
-            event = self.store.record_approval(self.identity, {
+            event = self.store.record_approval(self.admin, {
                 "caseId": case_id, "scopeType": "stage", "scopeKey": stage, "roleKey": role,
                 "decision": decision, "comment": f"{stage} {role} 실제 결재", "snapshot": snapshot,
             })
@@ -184,27 +186,27 @@ class QMSStoreTests(unittest.TestCase):
         case = {"id": "CASE-1", "status": "In Progress", "sourceIntakeId": "INT-2", "claimTitle": "부팅 불량"}
         self.store.save_state(self.identity, {"cases": [case], "intakeQueue": [intake, linked]}, 0, "seed")
         self.assertTrue(self.store.evaluate_sla_escalations(self.identity))
-        delete = lambda **changes: self.store.delete_record(self.identity, {"type": "intake", "id": "INT-1", "reason": "검증용 테스트 접수 정리", "expectedRevision": 1, **changes})
+        delete = lambda **changes: self.store.delete_record(self.admin, {"type": "intake", "id": "INT-1", "reason": "검증용 테스트 접수 정리", "expectedRevision": 1, **changes})
         for changes, code in (({"reason": "짧음"}, "DELETE_REASON_REQUIRED"), ({"type": "user"}, "INVALID_DELETE"), ({"id": "NONE"}, "RECORD_NOT_FOUND"),
                               ({"expectedRevision": 0}, "REVISION_CONFLICT"), ({"id": "INT-2"}, "INTAKE_HAS_CASE")):
             with self.assertRaises(QMSApiError) as caught:
                 delete(**changes)
             self.assertEqual(caught.exception.code, code)
-        _, token, _ = self.store.authenticate("jhpark", "1")
+        # A quality reviewer without administrator rights cannot delete.
         with self.assertRaises(QMSApiError) as caught:
-            self.store.delete_record(self.store.resolve_session(token), {"type": "intake", "id": "INT-1", "reason": "권한 없는 삭제 시도", "expectedRevision": 1})
+            self.store.delete_record(self.identity, {"type": "intake", "id": "INT-1", "reason": "권한 없는 삭제 시도", "expectedRevision": 1})
         self.assertEqual(caught.exception.code, "ROLE_FORBIDDEN")
         result = delete()
         self.assertEqual(result["revision"], 2)
         state = self.store.get_state()["state"]
         self.assertEqual([item["intakeId"] for item in state["intakeQueue"]], ["INT-2"])
         self.assertFalse(any(item["caseId"] == "INT-1" for item in self.store.evaluate_sla_escalations(self.identity)))
-        self.store.delete_record(self.identity, {"type": "case", "id": "CASE-1", "reason": "검증용 테스트 Case 정리", "expectedRevision": 2})
-        self.store.delete_record(self.identity, {"type": "intake", "id": "INT-2", "reason": "Case 삭제 후 접수 정리", "expectedRevision": 3})
+        self.store.delete_record(self.admin, {"type": "case", "id": "CASE-1", "reason": "검증용 테스트 Case 정리", "expectedRevision": 2})
+        self.store.delete_record(self.admin, {"type": "intake", "id": "INT-2", "reason": "Case 삭제 후 접수 정리", "expectedRevision": 3})
         self.assertEqual(self.store.get_state()["state"], {"cases": [], "intakeQueue": []})
         with self.store._connect() as db:
             kept = db.execute("SELECT record_type, record_id, record_json, reason, deleted_by_username FROM deleted_records ORDER BY id").fetchall()
-        self.assertEqual([(r["record_type"], r["record_id"], r["deleted_by_username"]) for r in kept], [("intake", "INT-1", "sjkim"), ("case", "CASE-1", "sjkim"), ("intake", "INT-2", "sjkim")])
+        self.assertEqual([(r["record_type"], r["record_id"], r["deleted_by_username"]) for r in kept], [("intake", "INT-1", "master"), ("case", "CASE-1", "master"), ("intake", "INT-2", "master")])
         self.assertEqual(json.loads(kept[1]["record_json"])["claimTitle"], "부팅 불량")
         self.assertEqual(sum(row["action"] == "RECORD_DELETED" for row in self.store.audit_entries(self.identity)), 3)
 
@@ -223,6 +225,13 @@ class QMSStoreTests(unittest.TestCase):
             self.store.authenticate("mwpark", "1")
         with self.assertRaises(QMSApiError):
             self.store.authenticate("sangwook.ki", "1")
+
+    def test_administrator_is_a_separate_account(self):
+        self.assertEqual(self.admin.user["roles"], ["system_admin"])
+        self.assertTrue(self.admin.user["isMaster"])
+        self.assertNotIn("system_admin", self.identity.user["roles"])
+        self.assertFalse(self.identity.user["isMaster"])
+        self.assertEqual(set(self.identity.user["roles"]), {"quality_reviewer", "case_facilitator", "customer_dispatcher"})
 
 
 if __name__ == "__main__":

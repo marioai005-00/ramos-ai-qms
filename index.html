@@ -83,8 +83,11 @@
           <span style="color:#60a5fa;">전사 62명 계정 지원</span>
         </div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
-          <button type="button" class="quick-persona-chip" onclick="handleQuickLogin('sjkim')" title="라모스 본사 SQE 품질 실무 간사">
-            <span>⭐ 김성중 S.Pro</span> <span style="font-size:0.65rem; color:#60a5fa;">sjkim (본사SQE)</span>
+          <button type="button" class="quick-persona-chip" onclick="handleQuickLogin('master')" title="시스템 관리자 (Master 권한)">
+            <span>⭐ 시스템 관리자</span> <span style="font-size:0.65rem; color:#60a5fa;">master (Master)</span>
+          </button>
+          <button type="button" class="quick-persona-chip" onclick="handleQuickLogin('sjkim')" title="품질혁신팀 품질 실무 간사">
+            <span>👤 김성중 S.Pro</span> <span style="font-size:0.65rem; color:#60a5fa;">sjkim (품질 실무)</span>
           </button>
           <button type="button" class="quick-persona-chip" onclick="handleQuickLogin('thkwon')" style="border-color:#f97316; background:rgba(249,115,22,0.12);" title="TechL 외주 협력사 담당자">
             <span>🏭 권태훈 부장</span> <span style="font-size:0.65rem; color:#f97316; font-weight:700;">TechL</span>
@@ -454,8 +457,8 @@
 
   <!-- Modular JavaScript Architecture (Cache-Busting for Instant Live Updates) -->
   <script src="js/clean_start_migration.js?v=20261002_clean_start_v2"></script>
-  <script src="js/data.js?v=20261002_assembly_v1"></script>
-  <script src="js/org_tree.js?v=20261002_localtime_v1"></script>
+  <script src="js/data.js?v=20261002_master_v1"></script>
+  <script src="js/org_tree.js?v=20261002_master_v1"></script>
   <script src="js/ai_engine.js?v=20261002_ai_msg_v1"></script>
   <script src="js/server_api.js?v=20261002_delete_v1"></script>
   <script src="js/ui_components.js?v=20261002_localtime_v1"></script>
