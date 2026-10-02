@@ -48,7 +48,7 @@ function renderReportsHubView(c) {
 
   return `
     <!-- Top Bar -->
-    ${renderQmsPageHeader({title:'8D 공식 리포트 및 결재',icon:'shield-check',description:'물류·FA 검토, Leader·Champion 승인 후 품질 실무 담당자가 고객 송부를 준비합니다.',reference:reportCase.id,className:'no-print',actions:`<button class="btn btn-secondary" onclick="openCustomerAiGatekeeperModal(null,currentGateKey)" title="고객사 송부 전 자료 확인"><i data-lucide="sparkles"></i> 송부 전 AI 검토</button><button class="btn btn-primary" onclick="window.print()"><i data-lucide="printer"></i> A4 인쇄 / PDF 저장</button>`})}
+    ${renderQmsPageHeader({title:'8D 공식 리포트 및 결재',icon:'shield-check',description:'물류·FA 검토, Leader·Champion 승인 후 품질 실무 담당자가 고객 송부를 준비합니다.',reference:reportCase.id,className:'no-print',actions:`<button class="btn btn-secondary" onclick="downloadReportWorkbook()" title="현재 보고서 범위를 Excel 파일로 내려받기"><i data-lucide="file-spreadsheet"></i> Excel 내려받기</button><button class="btn btn-secondary" onclick="openCustomerAiGatekeeperModal(null,currentGateKey)" title="고객사 송부 전 자료 확인"><i data-lucide="sparkles"></i> 송부 전 AI 검토</button><button class="btn btn-primary" onclick="window.print()"><i data-lucide="printer"></i> A4 인쇄 / PDF 저장</button>`})}
 
     <!-- 3-Gate Milestone Navigation Cards -->
     <div class="gate-nav-bar no-print">
@@ -448,6 +448,23 @@ async function dispatchReportToCustomer(gateKey) {
     c.closedAt = now;
     saveAppData();
     renderCurrentView();
+  }
+}
+
+async function downloadReportWorkbook() {
+  const c = getActiveCase(); if (!c) return;
+  try {
+    // The workbook is built from the centrally saved Case, so pending edits are saved first.
+    saveAppData();
+    await QMSApi.flushSaves();
+    const { blob, filename } = await QMSApi.downloadCaseReport(c.id, currentGateKey);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url; link.download = filename;
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (error) {
+    alert(`Excel 보고서를 만들지 못했습니다. ${error.message}`);
   }
 }
 

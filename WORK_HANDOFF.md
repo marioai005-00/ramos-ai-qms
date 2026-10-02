@@ -1,3 +1,14 @@
+## 최신 수정 — 2026-10-02 D4~D8 근거 기반 초안 · 외주 접수 가져오기 · 외주사 현황 · Excel 보고서
+
+- D4~D8 근거 기반 초안: stage_drafts.py와 POST /__api__/qms/ai/stage-draft. 중앙에 저장된 Case, 연결된 외주 접수, 유사도 0.5 이상 종결 Case만 읽어 사실/추론/누락/제안을 분리해 돌려준다. 외부 AI를 쓰지 않으므로 .env 없이 동작한다. 원인 문장·측정값·판정·완료·승인·Evidence 칸은 만들지 않는다. D4는 필수 도구 5개의 분석 목적만 제안하고 비어 있는 칸에만 넣는다. D5~D8은 기존 "미확인 상태로 추가" 경로를 그대로 쓴다. 기존 외부 AI 초안 버튼은 "외부 AI 초안"으로 남겼다.
+- 외주 접수 가져오기: js/views/supplier_bridge.js를 다시 썼다. 이전 버전은 Case와 무관한 접수까지 끌어와 4,800ea·무라타 X7R·ECN-260901-01·LGE 승인 같은 고정값을 넣고 조치를 Completed로 표시했다. 지금은 심의자가 이 Case에 연결한 접수만 보이고, 외주사가 실제 입력한 값만 D3(미확인·Open), D4 Evidence(원본 바이트 복사, 출처 기록), D5 대책 후보(미선정)로 옮긴다. ECN·고객 승인 정보는 가져오지 않는다.
+- 가짜 실증 차트 제거: D4의 SEM·X-ray 합성 이미지("IATF 16949 공인 실측")와 D6의 Cpk·TC1000h 차트("검증 100% PASS")는 Case 데이터와 무관한 고정 그림이어서 화면과 보고서에서 삭제했다. js/semiconductor_evidence_svg.js 삭제.
+- 외주사 품질 현황: 메뉴 "외주 품질 관리 → 외주사 품질 현황"(사내 계정 전용), GET /__api__/qms/supplier-summary. 외주 접수와 부적합 통보의 저장 기록을 4개 공식 외주사별로 집계한다. 수량이 입력되지 않은 Issue는 불량률 계산에서 빼고 "기록 없음"으로 표시한다.
+- Excel 보고서: report_export.py(표준 라이브러리만 사용)와 GET /__api__/qms/cases/{id}/report.xlsx?gate=. 8D 리포트 화면의 "Excel 내려받기". 8D Report·Evidence·결재 이력 3개 시트. 결재되지 않은 단계와 보고서는 DRAFT/미결재로 표기한다. templates 폴더가 비어 있어 고객사 지정 양식은 적용하지 않았고 공통 양식 하나다.
+- 검증: 임시 DB에서 Python 86건 통과(직전 74 + 초안·보고서·현황·출처 메모 10 + 정적 가드 2). 실제 브라우저(임시 DB)에서 D4/D5/D6 초안 생성·적용, 외주 Issue·PCN 연결 후 D3/D4/D5 가져오기, 현황판, Excel 내려받기(xlsx 9KB) 확인. tests/*.cjs 감사 스크립트는 실행하지 않았다.
+- 보류: 다른 PC 접속(3번)과 이메일 발송(4번)은 사용자와 다시 확인한 뒤 구현한다.
+- 자료: docs/STAGE_DRAFT_SUPPLIER_REPORT_20261002.md, tests/test_stage_draft_report_summary_http.py.
+
 ## 최신 수정 — 2026-10-02 16_QMS_8D 이전 · 가짜 승인 차단 · 외주 접수 중앙 저장
 
 - 폴더: 작업 폴더가 `G:/내 드라이브/AI_Place/Work/16_QMS_8D`로 바뀌었다. `14_AI_8D Report`의 소스 169개 파일만 반입했고(바이트 일치 확인) output/backups/light_audit/패치 조각/.env/운영 DB는 가져오지 않았다. 14번은 수정하지 않았다. 16번은 새 git 저장소(main)이며 14번의 Case·접수·감사 기록은 없다.

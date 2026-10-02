@@ -31,28 +31,13 @@ function renderLateStageWorkspace(c,stage){
  const context=stage==='D5'?['Occurrence','Escape','System'].map(t=>`${t}: ${roots[t]?.statement||'원인 미확정'} (${roots[t]?.status||'미확인'})`).join('\n'):(c.d5.candidates||[]).filter(r=>r.selected).map(r=>`${r.id} [${r.causeType||'원인 연결 필요'}] ${r.title}`).join('\n');
  return `<form id="lateStageForm" data-stage="${stage}" data-case="${esc(c.id)}" onsubmit="event.preventDefault();saveLateStage()" onchange="saveLateStage(false)">
  <div class="card"><h2>${stage}. ${spec.title}</h2><p style="white-space:pre-wrap">${esc(context||'선행 단계의 선정 대책을 확인하세요.')}</p><p>AI 초안은 제안입니다. 실제 실행·측정·고객 승인과 증거는 담당자가 확인합니다.</p>
- <button type="button" class="btn btn-secondary" onclick="generateLateStageAI('${stage}')">AI 분석 및 작성 초안</button> <button type="submit" class="btn btn-primary">저장</button> <button type="button" class="btn btn-secondary" onclick="openStageReportPreview('${stage}')">Report 미리보기</button></div>
+ <button type="button" class="btn btn-primary" onclick="generateEvidenceStageDraft('${stage}')">근거 기반 초안 생성</button> <button type="button" class="btn btn-secondary" onclick="generateLateStageAI('${stage}')" title="외부 AI 공급자 설정이 필요합니다">외부 AI 초안</button> <button type="submit" class="btn btn-primary">저장</button> <button type="button" class="btn btn-secondary" onclick="openStageReportPreview('${stage}')">Report 미리보기</button></div>
  ${stage === 'D5' && typeof renderD5SupplierBridgeBanner === 'function' ? renderD5SupplierBridgeBanner(c) : ''}
-   ${stage === 'D6' && typeof window.SemiconductorEvidence !== 'undefined' ? `
-    <div class="card quality-stage-card" style="margin-bottom:16px;">
-      <div class="quality-tool-head inline-head">
-        <div>
-          <span class="quality-tool-kicker">SPC & ACCELERATED RELIABILITY EMPIRICAL PROOF</span>
-          <h3 style="margin:2px 0 0 0; font-size:0.95rem; font-weight:800; color:var(--text-primary);">📊 실증 데이터 검증 (Cpk 공정능력 정규분포 & TC1000h 가속수명 신뢰성 곡선)</h3>
-        </div>
-        <span class="badge-pill" style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid #10b981;">검증 100% PASS</span>
-      </div>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:12px;">
-        ${window.SemiconductorEvidence.renderCpkDistributionSvg({height: 200})}
-        ${window.SemiconductorEvidence.renderTC1000hSurvivalSvg({height: 200})}
-      </div>
-    </div>
-  ` : ''}
   ${Object.entries(spec.groups).map(([group,g])=>`<div class="card"><h3>${g.label}</h3>${d[group].map((r,i)=>`<div class="card"><div class="grid-3">${Object.entries(g.fields).map(([k,f])=>lateField(`${group}.${i}.${k}`,f,r[k])).join('')}</div><button type="button" class="btn btn-secondary btn-sm" onclick="editLateRow('${stage}','${group}',${i})">행 삭제</button></div>`).join('')}<button type="button" class="btn btn-secondary" onclick="editLateRow('${stage}','${group}')">행 추가</button></div>`).join('')}
  ${Object.entries(spec.objects).map(([obj,fields])=>`<div class="card"><div class="grid-3">${Object.entries(fields).map(([k,f])=>lateField(`${obj}.${k}`,f,d[obj][k])).join('')}</div></div>`).join('')}
  ${Object.entries(spec.scalars||{}).map(([k,f])=>lateField(k,f,d[k])).join('')}
  <div class="card"><label><input id="lateHumanConfirmed" type="checkbox" ${d.approval?.humanConfirmed?'checked':''}> 입력 내용과 원본 증거를 검토했습니다</label><p>${esc(lateStageReviewError(c,stage)||'내용 점검 완료 — 기존 단계 결재를 진행하세요.')}</p></div>
- ${d.aiDraft?`<div class="card"><h3>AI 분석 초안 · 사람 검토 필요</h3><pre style="white-space:pre-wrap">${esc(JSON.stringify(d.aiDraft.payload,null,2))}</pre><button type="button" class="btn btn-secondary" onclick="applyLateStageAI('${stage}')">검토할 제안을 미확인 상태로 추가</button><p>${esc(d.aiDraft.engine||'')} · ${esc(d.aiDraft.at||'')}</p></div>`:''}</form>`;
+ ${d.aiDraft?renderStageDraftPanel(stage,d.aiDraft,`applyLateStageAI('${stage}')`,`discardStageDraft('${stage}')`):''}</form>`;
 }
 function captureLateStageForm(c,stage){
  const form=document.getElementById('lateStageForm');if(!form||form.dataset.stage!==stage||form.dataset.case!==c.id)return;
@@ -106,12 +91,63 @@ async function generateLateStageAI(stage){
   c[stage.toLowerCase()].aiDraft={at:new Date().toISOString(),engine:result.engine,model:result.model,payload,context};saveAppData();renderCurrentView();
  }catch(error){alert(`AI 초안을 생성하지 못했습니다. 기존 작성 내용은 유지됩니다. ${error.message}`);}
 }
+const STAGE_DRAFT_REPLACER=(k,v)=>['aiDraft','approval'].includes(k)?undefined:v;
+async function generateEvidenceStageDraft(stage){
+ if(!saveLateStage(false))return;const c=getActiveCase();
+ try{
+  await QMSApi.flushSaves();
+  const draft=await QMSApi.generateStageDraft(c.id,stage);
+  if(getActiveCase()!==c){alert('화면이 변경되어 초안을 적용하지 않았습니다.');return;}
+  c[stage.toLowerCase()].aiDraft={at:draft.generatedAt,engine:draft.engine,payload:draft.payload,context:JSON.stringify(lateAIContext(c,stage),STAGE_DRAFT_REPLACER)};
+  saveAppData();renderCurrentView();
+ }catch(error){alert(`초안을 생성하지 못했습니다. 기존 작성 내용은 유지됩니다. ${error.message}`);}
+}
+function discardStageDraft(stage){const c=getActiveCase();if(!c)return;if(stage!=='D4'&&!saveLateStage(false))return;if(stage==='D4')captureD4Form(c);delete c[stage.toLowerCase()].aiDraft;saveAppData();renderCurrentView();}
+/* Readable draft panel shared by D4~D8: facts, inferences, gaps and proposals are shown apart. */
+function renderStageDraftPanel(stage,draft,applyCall,discardCall){
+ const p=draft.payload||{},esc=escapeWorkspaceValue;
+ const list=(title,items,tone)=>Array.isArray(items)&&items.length?`<section class="stage-draft-block stage-draft-${tone}"><h4>${title} <span>${items.length}</span></h4><ul>${items.map(item=>`<li>${esc(typeof item==='string'?item:JSON.stringify(item))}</li>`).join('')}</ul></section>`:'';
+ const schema=LATE_STAGE_SCHEMA[stage];
+ const label=(group,key)=>{const f=schema?.groups?.[group]?.fields?.[key];return Array.isArray(f)?f[0]:f||key;};
+ const proposals=Object.entries(p.groups||{}).filter(([,rows])=>Array.isArray(rows)&&rows.length).map(([group,rows])=>`<section class="stage-draft-block stage-draft-proposal"><h4>제안 · ${esc(schema?.groups?.[group]?.label||group)} <span>${rows.length}</span></h4>${rows.map(row=>`<dl>${Object.entries(row).filter(([,v])=>typeof v==='string'&&v).map(([k,v])=>`<div><dt>${esc(label(group,k))}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`).join('')}</section>`).join('');
+ const tools=Array.isArray(p.tools)&&p.tools.length?`<section class="stage-draft-block stage-draft-proposal"><h4>제안 · 분석 목적 <span>${p.tools.length}</span></h4>${p.tools.map(tool=>`<dl><div><dt>${esc(getD4ToolById(tool.id)?.name||tool.id)}</dt><dd>${esc(tool.hypothesis)}</dd></div>${tool.evidenceHint?`<div><dt>참고 Evidence</dt><dd>${esc(tool.evidenceHint)}</dd></div>`:''}</dl>`).join('')}</section>`:'';
+ const questions=Array.isArray(p.causeQuestions)&&p.causeQuestions.length?`<section class="stage-draft-block stage-draft-missing"><h4>원인별로 답해야 할 질문</h4><ul>${p.causeQuestions.map(q=>`<li><b>${esc(q.label)}</b> · ${esc(q.question)}</li>`).join('')}</ul></section>`:'';
+ const canApply=Boolean(proposals||tools);
+ return `<div class="card stage-draft-panel"><div class="stage-draft-head"><div><h3>${stage} 검토용 초안 · 사람 확인 필요</h3><p>${esc(draft.engine||'')} · ${esc(draft.at||'')} · 측정값·판정·완료·승인은 초안에 포함하지 않습니다.</p></div><div class="stage-draft-actions">${canApply?`<button type="button" class="btn btn-primary" onclick="${applyCall}">제안을 미확인 상태로 추가</button>`:''}<button type="button" class="btn btn-secondary" onclick="${discardCall}">초안 닫기</button></div></div>
+ ${list('Case에 기록된 사실',p.confirmedFacts,'fact')}${list('추론 · 확정 아님',p.inferences,'inference')}${list('누락 · 확인 필요',p.missingInformation,'missing')}${questions}${tools}${proposals}${list('참고 · 유사 종결 Case',p.references,'reference')}${list('권고',p.recommendations,'recommendation')}</div>`;
+}
+/* D4 draft: proposes analysis purposes only. Evidence, findings and cause statements stay with the owner. */
+function renderD4DraftCard(c){
+ const d4=c.d4||{};
+ return `<div class="card quality-stage-card"><div class="quality-tool-head inline-head"><div><span class="quality-tool-kicker">D4 · 근거 기반 초안</span><h3>기록된 사실로 분석 목적 초안 만들기</h3><p>D2에서 사실 확인된 차이점, 연결된 Evidence와 외주 접수, 유사 종결 Case만 사용합니다. 원인과 시험 결과는 만들지 않습니다.</p></div><button type="button" class="btn btn-primary" onclick="generateD4StageDraft()"><i data-lucide="file-search"></i> 근거 기반 초안 생성</button></div></div>${d4.aiDraft?renderStageDraftPanel('D4',d4.aiDraft,'applyD4StageDraft()',"discardStageDraft('D4')"):''}`;
+}
+async function generateD4StageDraft(){
+ const c=getActiveCase();if(!c)return;captureD4Form(c);saveAppData();
+ try{
+  await QMSApi.flushSaves();
+  const draft=await QMSApi.generateStageDraft(c.id,'D4');
+  if(getActiveCase()!==c){alert('화면이 변경되어 초안을 적용하지 않았습니다.');return;}
+  c.d4.aiDraft={at:draft.generatedAt,engine:draft.engine,payload:draft.payload};
+  saveAppData();renderCurrentView();
+ }catch(error){alert(`초안을 생성하지 못했습니다. 기존 작성 내용은 유지됩니다. ${error.message}`);}
+}
+function applyD4StageDraft(){
+ const c=getActiveCase();if(!c)return;const d4=captureD4Form(c),draft=d4.aiDraft;if(!draft)return;
+ for(const tool of draft.payload.tools||[]){
+  if(!getD4ToolById(tool.id)||typeof tool.hypothesis!=='string')continue;
+  let row=d4.selectedTools.find(item=>item.id===tool.id);
+  if(!row){row={id:tool.id,source:'AI',hypothesis:'',evidence:'',finding:'',owner:'',status:'Planned',verified:false};d4.selectedTools.push(row);}
+  // Text the owner already wrote is never overwritten.
+  if(!row.hypothesis)row.hypothesis=tool.hypothesis.slice(0,4000);
+ }
+ delete d4.aiDraft;d4.approval={status:'Draft',humanConfirmed:false};saveAppData();renderCurrentView();
+}
 function applyLateStageAI(stage){
  if(!saveLateStage(false))return;const c=getActiveCase(),d=c[stage.toLowerCase()],draft=d.aiDraft;if(!draft)return;
  const context=JSON.stringify(lateAIContext(c,stage),(k,v)=>['aiDraft','approval'].includes(k)?undefined:v);if(context!==draft.context){alert('이전 단계 또는 현재 내용이 변경되었습니다. AI 초안을 다시 요청하세요.');return;}
  for(const [group,g] of Object.entries(LATE_STAGE_SCHEMA[stage].groups)){
   const rows=draft.payload.groups[group];if(!Array.isArray(rows))continue;
-  for(const row of rows.slice(0,20)){if(!row||typeof row!=='object')continue;const safe={id:`${stage}-${intakeFileId()}`,source:'AI Recommendation',generatedAt:draft.at,generatedBy:draft.engine};for(const key of Object.keys(g.fields)){if(['id','evidence','selected','checked','failQty','sampleSize','result','status','completedAt'].includes(key))continue;if(typeof row[key]==='string')safe[key]=row[key].slice(0,4000);}
+  for(const row of rows.slice(0,20)){if(!row||typeof row!=='object')continue;const safe={id:`${stage}-${intakeFileId()}`,source:String(draft.engine||'').startsWith('server-')?'근거 기반 초안':'AI Recommendation',generatedAt:draft.at,generatedBy:draft.engine};for(const key of Object.keys(g.fields)){if(['id','evidence','selected','checked','failQty','sampleSize','result','status','completedAt'].includes(key))continue;if(typeof row[key]==='string')safe[key]=row[key].slice(0,4000);}
    if(stage==='D5')safe.selected=false;if(stage==='D6'){safe.result='Pending';safe.sampleSize='';safe.failQty='';}if(stage==='D7')safe.status='Open';if(stage==='D8')safe.checked=false;d[group].push(safe);
   }
  }
@@ -235,12 +271,7 @@ function renderLateStageReport(c,stage){
     </tr>
    </tbody>
   </table>
-  ${typeof window.SemiconductorEvidence !== 'undefined' ? `
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-top:14px;" class="print-avoid-break">
-      ${window.SemiconductorEvidence.renderCpkDistributionSvg({height: 180})}
-      ${window.SemiconductorEvidence.renderTC1000hSurvivalSvg({height: 180})}
-    </div>
-  ` : ''}`;
+`;
  }else if(stage==='D7'){
   const sys=d.systemUpdates||[], hor=d.horizontalDeployment||[];
   html+=`<h4>표준 / 시스템 문서 개정 (Prevent Recurrence - System Updates)</h4>

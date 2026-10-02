@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="css/ui_consistency.css?v=20261002_uniform_v2">
   <link rel="stylesheet" href="css/internal_quality.css?v=20261002_supplier_notices_v1">
   <link rel="stylesheet" href="css/triage_result.css?v=20261002_triage_result_v3">
+  <link rel="stylesheet" href="css/stage_draft_supplier.css?v=20261002_features_v1">
   <script>
     (function() {
       try {
@@ -169,6 +170,9 @@
       </a>
       <div id="supplierQualityNavSection" role="group" aria-labelledby="menuCatSupplierQuality">
         <div class="menu-cat" id="menuCatSupplierQuality">외주 품질 관리</div>
+        <a class="nav-item" id="nav-supplier-dashboard" onclick="switchNav('supplier-dashboard', this)">
+          <i data-lucide="bar-chart-3" style="width:16px;height:16px;color:#f97316;"></i><span>외주사 품질 현황</span>
+        </a>
         <a class="nav-item" id="nav-supplier-portal" onclick="switchNav('supplier-pcn', this)">
           <i data-lucide="factory" style="width:16px;height:16px;color:#f97316;"></i>
           <span id="navSupplierPortalText">PCN 변경 관리</span>
@@ -452,7 +456,7 @@
   <script src="js/data.js?v=20261002_clean_start_v2"></script>
   <script src="js/org_tree.js?v=20261002_evidence_v1"></script>
   <script src="js/ai_engine.js?v=20260916_v2"></script>
-  <script src="js/server_api.js?v=20261002_tickets_v1"></script>
+  <script src="js/server_api.js?v=20261002_features_v1"></script>
   <script src="js/ui_components.js?v=20261002_uniform_v2"></script>
   <script src="js/views/agent_operations.js?v=20261002_uniform_v2"></script>
   <script src="js/views/similar_cases.js?v=20260916_v1"></script>
@@ -461,25 +465,25 @@
   <script src="js/approval.js?v=20261002_approval_guard_v1"></script>
   <script src="js/views/dashboard.js?v=20261002_uniform_v2"></script>
   <script src="js/views/intake.js?v=20261002_triage_result_v3"></script>
-  <script src="js/semiconductor_evidence_svg.js?v=20260909_v52"></script>
-  <script src="js/views/workspace.js?v=20261002_d2_korean_v1"></script>
+  <script src="js/views/workspace.js?v=20261002_features_v1"></script>
   <script src="js/views/evidence.js?v=20261002_uniform_v2"></script>
   <script src="js/views/actions.js?v=20261002_uniform_v2"></script>
-  <script src="js/views/reports.js?v=20261002_approval_guard_v1"></script>
+  <script src="js/views/reports.js?v=20261002_features_v1"></script>
   <script src="js/views/d4_evidence.js?v=20260909_v49"></script>
   <script src="js/views/stage_preview.js?v=20261002_clean_start_v2"></script>
-  <script src="js/late_stages.js?v=20260909_v49"></script>
+  <script src="js/late_stages.js?v=20261002_features_v1"></script>
   <script src="js/views/internal_ai_gatekeeper.js?v=20260922_v1"></script>
   <script src="js/supplier_data.js?v=20261002_tickets_v1"></script>
-  <script src="js/views/supplier_ai_audit.js?v=20260922_v1"></script>
+  <script src="js/views/supplier_ai_audit.js?v=20261002_features_v1"></script>
   <script src="js/views/doc_viewer.js?v=20261002_clean_start_v2"></script>
   <script src="js/views/supplier_portal.js?v=20261002_tickets_v1"></script>
-  <script src="js/views/supplier_bridge.js?v=20260922_v1"></script>
+  <script src="js/views/supplier_bridge.js?v=20261002_features_v1"></script>
   <script src="js/views/sla_coq_engine.js?v=20261002_clean_start_v2"></script>
   <script src="js/views/autonomous_8d_agent.js?v=20261002_approval_guard_v1"></script>
   <script src="js/views/supplier_notices.js?v=20261002_supplier_notices_v2"></script>
+  <script src="js/views/supplier_dashboard.js?v=20261002_features_v1"></script>
   <script src="js/views/internal_quality.js?v=20261002_internal_v2"></script>
   <script src="js/ui_readability.js?v=20261002_uniform_v2"></script>
-  <script src="js/app.js?v=20261002_supplier_notices_v1"></script>
+  <script src="js/app.js?v=20261002_features_v1"></script>
 </body>
 </html>

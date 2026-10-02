@@ -1,0 +1,41 @@
+/* Stage draft panel (D4~D8) and supplier quality overview. Uses the shared theme variables. */
+@media screen {
+  .stage-draft-panel { border-left: 3px solid #0891b2; }
+  .stage-draft-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+  .stage-draft-head h3 { margin: 0 0 4px; font-size: 1rem; }
+  .stage-draft-head p { margin: 0; font-size: 0.78rem; color: var(--text-secondary); }
+  .stage-draft-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .stage-draft-block { border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-top: 10px; background: var(--bg-card-subtle); }
+  .stage-draft-block h4 { margin: 0 0 6px; font-size: 0.84rem; display: flex; align-items: center; gap: 8px; color: var(--text-primary); }
+  .stage-draft-block h4 span { font-size: 0.7rem; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-secondary); }
+  .stage-draft-block ul { margin: 0; padding-left: 18px; }
+  .stage-draft-block li { font-size: 0.82rem; line-height: 1.55; color: var(--text-primary); overflow-wrap: anywhere; }
+  .stage-draft-block dl { margin: 6px 0 0; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 6px; display: grid; gap: 4px; }
+  .stage-draft-block dl > div { display: grid; grid-template-columns: minmax(110px, 180px) 1fr; gap: 10px; }
+  .stage-draft-block dt { font-size: 0.74rem; font-weight: 700; color: var(--text-secondary); }
+  .stage-draft-block dd { margin: 0; font-size: 0.82rem; color: var(--text-primary); overflow-wrap: anywhere; }
+  .stage-draft-missing { border-left: 3px solid #f59e0b; }
+  .stage-draft-inference { border-left: 3px solid #a855f7; }
+  .stage-draft-fact { border-left: 3px solid #10b981; }
+  .stage-draft-proposal { border-left: 3px solid #2563eb; }
+
+  body.supplier-mode #nav-supplier-dashboard { display: none; }
+  .sq-section-title { margin: 0 0 10px; font-size: 0.95rem; }
+  .sq-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; margin-top: 16px; }
+  .sq-card { border: 1px solid var(--border); border-radius: 8px; padding: 16px; background: var(--bg-card); }
+  .sq-card.needs-action { border-left: 3px solid #f59e0b; }
+  .sq-card header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+  .sq-card h3 { margin: 0; font-size: 1.05rem; color: var(--text-primary); }
+  .sq-card header p { margin: 2px 0 0; font-size: 0.76rem; color: var(--text-secondary); }
+  .sq-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .sq-grid > div { border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; background: var(--bg-card-subtle); display: grid; gap: 2px; }
+  .sq-grid span { font-size: 0.72rem; color: var(--text-secondary); }
+  .sq-grid strong { font-size: 1.05rem; color: var(--text-primary); }
+  .sq-grid small { font-size: 0.7rem; color: var(--text-secondary); overflow-wrap: anywhere; }
+  .sq-repeat { margin: 12px 0 0; font-size: 0.78rem; color: var(--text-primary); display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; }
+  .sq-repeat svg { width: 14px; height: 14px; color: #f59e0b; }
+  @media (max-width: 640px) {
+    .sq-grid { grid-template-columns: 1fr; }
+    .stage-draft-block dl > div { grid-template-columns: 1fr; gap: 2px; }
+  }
+}

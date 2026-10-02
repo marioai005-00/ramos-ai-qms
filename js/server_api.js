@@ -189,11 +189,11 @@
     if (state.pendingState) throw new Error('중앙 저장을 완료하지 못했습니다.');
   }
 
-  async function uploadCaseEvidence(caseId, file, type, linkedStages) {
+  async function uploadCaseEvidence(caseId, file, type, linkedStages, sourceNote) {
     await flushSaves();
     const dataUrl = await fileAsDataURL(file);
     const result = await request(`/__api__/qms/cases/${encodeURIComponent(caseId)}/evidence`, {
-      method: 'POST', body: { filename: file.name, dataUrl, type, linkedStages, expectedRevision: state.centralRevision }
+      method: 'POST', body: { filename: file.name, dataUrl, type, linkedStages, expectedRevision: state.centralRevision, ...(sourceNote ? { sourceNote } : {}) }
     });
     state.centralRevision = result.revision;
     return result;
@@ -235,6 +235,25 @@
   async function generateD1D3Draft(caseData) {
     const payload = await request('/__api__/qms/ai/d1-d3-draft', { method: 'POST', body: { case: caseData } });
     return payload.draft;
+  }
+
+  async function generateStageDraft(caseId, stage) {
+    const payload = await request('/__api__/qms/ai/stage-draft', { method: 'POST', body: { caseId, stage } });
+    return payload.draft;
+  }
+
+  async function supplierSummary() {
+    return request('/__api__/qms/supplier-summary');
+  }
+
+  async function downloadCaseReport(caseId, gateKey) {
+    const response = await fetch(`/__api__/qms/cases/${encodeURIComponent(caseId)}/report.xlsx?gate=${encodeURIComponent(gateKey)}`, { credentials: 'same-origin', cache: 'no-store' });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `보고서 요청 실패 (HTTP ${response.status})`);
+    }
+    const name = /filename\*=UTF-8''([^;]+)/.exec(response.headers.get('Content-Disposition') || '');
+    return { blob: await response.blob(), filename: name ? decodeURIComponent(name[1]) : `${caseId}_${gateKey}.xlsx` };
   }
 
   async function listAgentRuns(filters = {}) {
@@ -318,6 +337,9 @@
     prepareDispatch,
     similarCases,
     generateD1D3Draft,
+    generateStageDraft,
+    supplierSummary,
+    downloadCaseReport,
     evaluateEscalations,
     listAgentRuns,
     getAgentRun,

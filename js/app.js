@@ -607,6 +607,9 @@ function renderCurrentView() {
     case 'supplier-notices':
       viewHtml = renderSupplierNoticesView();
       break;
+    case 'supplier-dashboard':
+      viewHtml = renderSupplierDashboardView();
+      break;
     case 'supplier-pcn':
     case 'supplier-issues':
     case 'supplier-portal':

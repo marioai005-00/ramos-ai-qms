@@ -2012,6 +2012,8 @@ function getLotPrefixAndSeq(lotStr = '') {
           <div class="d4-selector-actions"><button type="button" class="btn btn-primary" onclick="applyD4Recommendations()"><i data-lucide="wand-sparkles"></i> 추천 도구 작업대에 적용</button><span>핵심 5개 + Case 특화 최대 4개</span></div>
         </div>
 
+        ${renderD4DraftCard(c)}
+
         ${typeof renderD4SupplierBridgeWidget === 'function' ? renderD4SupplierBridgeWidget(c) : ''}
 
         <div class="card quality-stage-card">
@@ -2024,23 +2026,6 @@ function getLotPrefixAndSeq(lotStr = '') {
         </div>
 
         ${d4.faMatrix.length?`<div class="card quality-stage-card"><div class="quality-tool-head"><span class="quality-tool-kicker">LEGACY / RECEIVED FA EVIDENCE</span><h3>기존 FA 분석자료</h3></div><div class="quality-table-wrap"><table class="custom-table"><thead><tr><th>분석</th><th>시료</th><th>기관</th><th>결과</th><th>증거</th></tr></thead><tbody>${d4.faMatrix.map(fa=>`<tr><td>${fa.test}</td><td>${fa.sample}</td><td>${fa.lab}</td><td>${fa.result}</td><td class="num-mono">${fa.evidenceId}</td></tr>`).join('')}</tbody></table></div></div>`:''}
-
-                <!-- Semiconductor Physical FA Micrograph & Radiograph Empirical Evidence -->
-        ${typeof window.SemiconductorEvidence !== 'undefined' ? `
-          <div class="card quality-stage-card" style="margin-bottom:16px;">
-            <div class="quality-tool-head inline-head">
-              <div>
-                <span class="quality-tool-kicker">SEMICONDUCTOR PHYSICAL FA LAB EMPIRICAL EVIDENCE</span>
-                <h3 style="margin:2px 0 0 0; font-size:0.95rem; font-weight:800; color:var(--text-primary);">🔬 실증 물리 분석 데이터 (SEM 전자현미경 단면 & 3D X-Ray 비파괴 투시 검사)</h3>
-              </div>
-              <span class="badge-pill" style="background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid #a855f7;">IATF 16949 공인 실측</span>
-            </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:12px;">
-              ${window.SemiconductorEvidence.renderSemMicrographSvg({height: 200})}
-              ${window.SemiconductorEvidence.renderXRayRadiographSvg({height: 200})}
-            </div>
-          </div>
-        ` : ''}
 
         <div class="card quality-stage-card d4-cause-gate">
           <div class="quality-tool-head"><span class="quality-tool-kicker">ROOT CAUSE PROOF GATE</span><h3>발생·유출·시스템 원인 분리 확정</h3><p>세 원인을 각각 기술하고 인과관계 4개 기준을 모두 확인해야 D4를 승인할 수 있습니다.</p></div>

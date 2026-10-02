@@ -493,6 +493,21 @@ class PortalHandler(SimpleHTTPRequestHandler):
         if clean_path == "/__api__/qms/supplier-tickets":
             self._send_json(200, {"success": True, "items": QMS_STORE.list_supplier_tickets(self._session_identity())})
             return True
+        if clean_path == "/__api__/qms/supplier-summary":
+            self._send_json(200, {"success": True, **QMS_STORE.supplier_quality_summary(self._session_identity())})
+            return True
+        report_export = re.fullmatch(r"/__api__/qms/cases/([^/]+)/report\.xlsx", clean_path)
+        if report_export:
+            item = QMS_STORE.export_case_report(self._session_identity(), urllib.parse.unquote(report_export.group(1)), (query.get("gate") or ["gate8D"])[0])
+            self.send_response(200)
+            self.send_header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            self.send_header("Content-Length", str(len(item["content"])))
+            self.send_header("Content-Disposition", "attachment; filename*=UTF-8''" + urllib.parse.quote(item["filename"], safe=""))
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(item["content"])
+            return True
         ticket_file = re.fullmatch(r"/__api__/qms/supplier-tickets/([A-Za-z0-9-]+)/files/([A-Za-z0-9-]+)", clean_path)
         if ticket_file:
             item = QMS_STORE.get_supplier_ticket_file(self._session_identity(), *ticket_file.groups())
@@ -605,7 +620,7 @@ class PortalHandler(SimpleHTTPRequestHandler):
         qms_paths = {
             "/__api__/auth/login", "/__api__/auth/logout", "/__api__/auth/change-password",
             "/__api__/qms/supplier-notices", "/__api__/qms/supplier-tickets", "/__api__/qms/internal-quality", "/__api__/qms/state", "/__api__/qms/stage-version", "/__api__/qms/approval",
-            "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/escalations/evaluate",
+            "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/ai/stage-draft", "/__api__/qms/escalations/evaluate",
             "/__api__/qms/agent-runs", "/__api__/qms/scheduler/evaluate",
         }
         if clean_path not in qms_paths and not agent_run_action and not case_source_action and not finding_action and not evidence_upload and not internal_update and not notice_update and not ticket_update:
@@ -689,6 +704,8 @@ class PortalHandler(SimpleHTTPRequestHandler):
             self._send_json(201, {"success": True, **QMS_STORE.prepare_dispatch(identity, params)})
         elif clean_path == "/__api__/qms/ai/d1-d3-draft":
             self._send_json(200, {"success": True, "draft": QMS_STORE.build_d1_d3_draft(identity, params.get("case"))})
+        elif clean_path == "/__api__/qms/ai/stage-draft":
+            self._send_json(200, {"success": True, "draft": QMS_STORE.build_stage_draft(identity, params)})
         elif clean_path == "/__api__/qms/escalations/evaluate":
             self._send_json(200, {"success": True, "items": QMS_STORE.evaluate_sla_escalations(identity), "externalNotificationEnabled": False})
         return True

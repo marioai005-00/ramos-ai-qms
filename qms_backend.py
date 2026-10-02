@@ -101,10 +101,12 @@ class SessionIdentity:
 
 from internal_quality import InternalQualityMixin
 from supplier_notices import SupplierNoticesMixin
-from supplier_tickets import SupplierTicketsMixin
+from supplier_tickets import SupplierSummaryMixin, SupplierTicketsMixin
+from report_export import ReportExportMixin
+from stage_drafts import StageDraftMixin
 
 
-class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin):
+class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin, SupplierSummaryMixin, StageDraftMixin, ReportExportMixin):
     """Thread-safe SQLite store used by the local portal server."""
 
     def __init__(self, project_root: Path):
@@ -578,6 +580,12 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin)
                     "type": evidence_type, "linkedStages": stages, "stageScoped": True,
                     "storageLocation": "QMS", "mimeType": mime, "sizeBytes": len(content),
                     "sha256": digest, "uploadedBy": identity.user["email"], "uploadedAt": now}
+        source_note = payload.get("sourceNote")
+        if source_note is not None:
+            if not isinstance(source_note, str) or len(source_note) > 240:
+                raise QMSApiError(400, "자료 출처 메모를 확인하세요.", code="INVALID_EVIDENCE")
+            if source_note.strip():
+                evidence["source"] = source_note.strip()
         with self._lock, self._connect() as db:
             db.execute("BEGIN IMMEDIATE")
             previous = db.execute("SELECT * FROM state_store WHERE id=1").fetchone()

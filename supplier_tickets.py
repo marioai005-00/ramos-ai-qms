@@ -3,7 +3,7 @@ import hashlib
 import json
 import math
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from internal_quality import REVIEW_ROLES, encoded, fail, now
 from supplier_notices import SUPPLIERS
@@ -238,3 +238,65 @@ class SupplierTicketsMixin:
             if not row:
                 fail(404, "첨부 원본을 찾을 수 없습니다.", "EVIDENCE_NOT_FOUND")
             return dict(row)
+
+
+def _parse_time(value):
+    try:
+        moment = datetime.fromisoformat(str(value))
+    except (TypeError, ValueError):
+        return None
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone(timedelta(hours=9)))
+
+
+class SupplierSummaryMixin:
+    def supplier_quality_summary(self, identity):
+        """Per-supplier counts derived from stored tickets and notices. Nothing is estimated."""
+        self._internal_permission(identity, read=True)
+        with self._connect() as db:
+            tickets = [json.loads(r[0]) for r in db.execute("SELECT record_json FROM supplier_tickets")]
+            notices = [json.loads(r[0]) for r in db.execute("SELECT record_json FROM supplier_notices")]
+        current = datetime.now(timezone.utc)
+        today = current.astimezone(timezone(timedelta(hours=9))).strftime("%Y-%m-%d")
+        suppliers, attention = [], []
+        for supplier_id, official in SUPPLIERS.items():
+            own = [t for t in tickets if t.get("supplier", {}).get("id") == supplier_id]
+            issues = [t for t in own if t.get("ticketType") == "Issue"]
+            awaiting_review = [t for t in own if t.get("status") in {"Submitted", "Report_Submitted", "Under_Review"}]
+            awaiting_supplier = [t for t in own if t.get("status") == "Revision_Requested"]
+            measured = [(t["incident"]["defectQty"], t["incident"]["inputQty"]) for t in issues
+                        if isinstance(t.get("incident"), dict) and isinstance(t["incident"].get("defectQty"), int) and isinstance(t["incident"].get("inputQty"), int) and t["incident"]["inputQty"] > 0]
+            parts = {}
+            for t in issues:
+                part = (t.get("targetProduct") or {}).get("partNumber") or ""
+                if part:
+                    parts.setdefault(part, []).append(t["ticketId"])
+            own_notices = [n for n in notices if n.get("supplier", {}).get("id") == supplier_id and n.get("status") != "Draft"]
+            awaiting_reply = [n for n in own_notices if n.get("status") in {"Issued", "RevisionRequested"}]
+            overdue = [n for n in awaiting_reply if n.get("dueDate") and n["dueDate"] < today]
+            reply_hours = []
+            for n in own_notices:
+                issued, first = _parse_time(n.get("issuedAt")), _parse_time((n.get("responses") or [{}])[0].get("receivedAt"))
+                if issued and first and first >= issued:
+                    reply_hours.append((first - issued).total_seconds() / 3600)
+            for t in awaiting_review:
+                waited = _parse_time(t.get("updatedAt"))
+                attention.append({"kind": "ticket", "id": t["ticketId"], "supplier": official["name"], "title": t.get("details", {}).get("title", ""),
+                                  "reason": "사내 심의 대기", "since": t.get("updatedAt"), "days": (current - waited).days if waited else None})
+            for n in overdue:
+                attention.append({"kind": "notice", "id": n["ticketId"], "supplier": official["name"], "title": n.get("title", ""),
+                                  "reason": f"회신 기한 {n['dueDate']} 초과", "since": n.get("dueDate"), "days": None})
+            suppliers.append({
+                "id": supplier_id, "name": official["name"], "category": official["category"], "contact": official["contact"],
+                "tickets": {"total": len(own), "pcn": len(own) - len(issues), "issue": len(issues), "awaitingReview": len(awaiting_review),
+                            "awaitingSupplier": len(awaiting_supplier), "approved": sum(t.get("status") == "Approved" for t in own),
+                            "rejected": sum(t.get("status") == "Rejected" for t in own), "linkedTo8D": sum(bool(t.get("sqeReview", {}).get("bound8DCaseId")) for t in own)},
+                "issueQuantities": {"reportedTickets": len(measured), "defectQty": sum(d for d, _ in measured), "inputQty": sum(i for _, i in measured),
+                                    "defectRatePct": round(sum(d for d, _ in measured) / sum(i for _, i in measured) * 100, 4) if measured else None},
+                "repeatedParts": [{"partNumber": part, "ticketIds": ids} for part, ids in sorted(parts.items()) if len(ids) >= 2],
+                "notices": {"total": len(own_notices), "awaitingReply": len(awaiting_reply), "overdue": len(overdue),
+                            "closed": sum(n.get("status") == "Closed" for n in own_notices),
+                            "averageFirstReplyHours": round(sum(reply_hours) / len(reply_hours), 1) if reply_hours else None, "repliedCount": len(reply_hours)},
+            })
+        attention.sort(key=lambda item: (item["kind"] != "notice", -(item["days"] or 0)))
+        return {"generatedAt": now(), "suppliers": suppliers, "attention": attention,
+                "totals": {"tickets": len(tickets), "notices": sum(n.get("status") != "Draft" for n in notices)}}

@@ -38,7 +38,7 @@ Copy-Item .env.example .env
 
 ```powershell
 python -m unittest discover -s tests -p "test_*.py" -v
-python -m py_compile portal_server.py qms_backend.py agent_runtime.py internal_quality.py supplier_notices.py supplier_tickets.py
+python -m py_compile portal_server.py qms_backend.py agent_runtime.py internal_quality.py supplier_notices.py supplier_tickets.py stage_drafts.py report_export.py
 ```
 
 상세 구조는 [중앙 운영 기반 아키텍처](docs/PRODUCTION_FOUNDATION.md), [Agent Unit 통합 플랫폼](docs/AGENT_UNIT_PLATFORM.md), 최신 상태는 [인수인계](인수인계.md)를 참고합니다.

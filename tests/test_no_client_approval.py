@@ -22,5 +22,18 @@ class NoClientSideApprovalTests(unittest.TestCase):
         self.assertNotIn("ramosAgent", reports)
 
 
+    def test_demo_evidence_and_fixed_supplier_figures_stay_removed(self):
+        # Synthetic FA / reliability charts and the fixed demo figures of the old supplier bridge and audit table.
+        forbidden = re.compile(r"SemiconductorEvidence|검증 100% PASS|IATF 16949 공인 실측|ECN-260901-01|무라타|4,800|SQ-2026-002|PCN-2026-001|RAMOS-8D-20260901-01")
+        for name in ("late_stages.js", "views/workspace.js", "views/supplier_bridge.js", "views/supplier_portal.js", "views/supplier_ai_audit.js", "supplier_data.js"):
+            with self.subTest(path=name):
+                self.assertIsNone(forbidden.search((PROJECT_ROOT / "js" / name).read_text(encoding="utf-8")))
+
+    def test_supplier_bridge_imports_only_tickets_bound_to_the_case(self):
+        bridge = (PROJECT_ROOT / "js" / "views" / "supplier_bridge.js").read_text(encoding="utf-8")
+        self.assertIn("ticket.sqeReview?.bound8DCaseId === caseId", bridge)
+        self.assertNotIn("status: 'Completed'", bridge)
+        self.assertNotIn("selected: true", bridge)
+
 if __name__ == "__main__":
     unittest.main()
