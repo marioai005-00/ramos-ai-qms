@@ -297,7 +297,7 @@
                     <th style="width:20%;">담당자</th>
                     <th style="width:20%;">소속 부서</th>
                     <th style="width:22%;">연락처 / Email</th>
-                    <th style="width:8%;">Status</th>
+                    <th style="width:8%;">상태</th>
                     <th style="width:6%; text-align:center;">관리</th>
                   </tr>
                 </thead>
@@ -316,7 +316,7 @@
                       </td>
                       <td style="color:var(--text-secondary);">${m.dept}</td>
                       <td class="num-mono" style="color:var(--text-secondary); font-size:0.75rem;">${m.contact}</td>
-                      <td><span class="badge-pill badge-ok">${m.status}</span></td>
+                      <td><span class="badge-pill ${m.status === 'Active' ? 'badge-ok' : 'badge-warn'}" style="white-space:nowrap;">${escapeWorkspaceValue(qmsCftStatusLabel(m.status))}</span></td>
                       <td style="text-align:center;">
                         ${!isProtectedCFTMember(m) ? `
                           <button class="btn btn-secondary btn-sm" style="padding:2px 6px; color:#f87171;" onclick="removeCFTMember(${idx})" title="팀원 제외">

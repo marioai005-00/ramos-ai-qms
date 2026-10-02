@@ -12,6 +12,7 @@ from xml.sax.saxutils import escape
 
 from internal_quality import fail, now
 
+CFT_STATUS_LABELS = {"AI Suggested - Human Review Required": "AI 추천", "Active": "배정"}
 GATES = {"gate3D": ("Initial 3D Report", 3), "gate5D": ("Interim 5D Report", 5), "gate8D": ("Final 8D Report", 8)}
 # Style ids defined in _STYLES: plain, title, section, table header, label, note.
 PLAIN, TITLE, SECTION, HEADER, LABEL, NOTE = 0, 1, 2, 3, 4, 5
@@ -150,7 +151,7 @@ def build_report_workbook(case: dict[str, Any], gate_key: str, exported_by: str)
         s.row([_approval_line(case, stage)], NOTE, merge=True)
 
     section("D1", "CFT 구성")
-    s.table(["역할", "성명", "부서", "연락처", "상태"], [[_v(m, "role"), _v(m, "name"), _v(m, "dept"), _v(m, "contact") or _v(m, "email"), _v(m, "status")] for m in _rows(case.get("team"))], "등록된 팀원 없음")
+    s.table(["역할", "성명", "부서", "연락처", "상태"], [[_v(m, "role"), _v(m, "name"), _v(m, "dept"), _v(m, "contact") or _v(m, "email"), CFT_STATUS_LABELS.get(_v(m, "status"), _v(m, "status"))] for m in _rows(case.get("team"))], "등록된 팀원 없음")
 
     d2 = _d(case.get("d2"))
     section("D2", "문제 정의")

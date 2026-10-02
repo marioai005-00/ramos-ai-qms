@@ -17,3 +17,8 @@ function qmsLocalTimestamp(date = new Date()) {
   const pad = n => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
+// Short Korean labels for CFT member status. The stored values stay as they are.
+const QMS_CFT_STATUS_LABELS = { 'AI Suggested - Human Review Required': 'AI 추천', 'Active': '배정' };
+function qmsCftStatusLabel(status) {
+  return QMS_CFT_STATUS_LABELS[status] || status || '';
+}
