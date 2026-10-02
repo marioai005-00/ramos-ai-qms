@@ -14,32 +14,24 @@ const CUSTOMER_SLA_RULES = {
     d3Hours: 24,
     d5Days: 14,
     d8Days: 30,
-    hourlyPenalty: 14000000, // ₩14,000,000 / hr
-    penaltyRule: 'Line stop delay penalty $10,000/hr + Claim penalty'
   },
   'HYUNDAI_MOBIS': {
     name: '현대모비스/현대차 전장부품',
     d3Hours: 12, // Critical automotive standard
     d5Days: 10,
     d8Days: 30,
-    hourlyPenalty: 30000000, // ₩30,000,000 / hr ($500/min)
-    penaltyRule: 'Automotive tier-1 strict line down penalty (₩500,000/min)'
   },
   'SAMSUNG_SEC': {
     name: '삼성전자 스마트가전/모바일',
     d3Hours: 24,
     d5Days: 14,
     d8Days: 30,
-    hourlyPenalty: 16000000,
-    penaltyRule: 'Global SQ standard 24h/14D/30D contract'
   },
   'DEFAULT': {
     name: '글로벌 AIAG-VDA 8D 표준',
     d3Hours: 24,
     d5Days: 14,
     d8Days: 30,
-    hourlyPenalty: 14000000,
-    penaltyRule: 'Standard AIAG-VDA 8D milestone agreement'
   }
 };
 
@@ -103,9 +95,7 @@ function calculateCaseSla(c) {
     customer:c.customer,
     ruleName:rule.name,
     ruleSource:Number.isFinite(triageHours) && triageHours > 0 ? '고객 규칙과 Triage 중 엄격 기준' : '고객 규칙',
-    hourlyPenalty:rule.hourlyPenalty,
     earlyHoursD3,
-    earlySavings:Math.round(earlyHoursD3 * rule.hourlyPenalty),
     baseDate,
     d3,
     d5,
