@@ -329,6 +329,8 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
             ("jhpark", "박재환", "팀장_S.Pro", "Flash 개발2팀", "jhpark@ramostek.com", ["stage_drafter"]),
             ("eunsan.lee", "이은산", "센터장_상무", "제조기획센터", "eunsan.lee@ramostek.com", ["stage_drafter"]),
             ("sahwang", "황승안", "팀장_상무", "품질혁신팀", "sahwang@ramostek.com", ["stage_champion"]),
+            # Every member of the quality innovation team can register a customer nonconformance (user decision 2026-10-02).
+            ("special2947", "이봉건", "Pro", "품질혁신팀", "special2947@ramostek.com", ["case_facilitator"]),
             ("hsjeong", "정현석", "팀장_S.Pro", "Flash 개발1팀", "hsjeong@ramostek.com", ["stage_drafter"]),
             ("fog1007", "이성우", "팀장_P.Pro", "Flash 개발3팀", "fog1007@ramostek.com", ["stage_drafter"]),
             ("satiou", "신덕용", "팀장_P.Pro", "DRAM 개발2팀", "satiou@ramostek.com", ["stage_leader"]),

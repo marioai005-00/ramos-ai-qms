@@ -233,6 +233,21 @@ class QMSStoreTests(unittest.TestCase):
         self.assertFalse(self.identity.user["isMaster"])
         self.assertEqual(set(self.identity.user["roles"]), {"quality_reviewer", "case_facilitator", "customer_dispatcher"})
 
+    def test_every_quality_innovation_member_can_register_an_intake(self):
+        state, revision = {"cases": [], "intakeQueue": []}, 0
+        for username in ("sjkim", "sahwang", "special2947"):
+            _, token, _ = self.store.authenticate(username, "1")
+            identity = self.store.resolve_session(token)
+            self.assertEqual(identity.user["dept"], "품질혁신팀")
+            state["intakeQueue"].append({"intakeId": f"INT-{username}", "status": "Quality Review Pending", "submittedAt": "2026-10-02 09:00"})
+            revision = self.store.save_state(identity, state, revision, "customer nonconformance registered")["revision"]
+        saved = self.store.get_state()["state"]["intakeQueue"]
+        self.assertEqual([item["intakeId"] for item in saved], ["INT-sjkim", "INT-sahwang", "INT-special2947"])
+        # Deleting stays with the administrator.
+        with self.assertRaises(QMSApiError) as caught:
+            self.store.delete_record(identity, {"type": "intake", "id": "INT-sjkim", "reason": "담당자 삭제 시도", "expectedRevision": revision})
+        self.assertEqual(caught.exception.code, "ROLE_FORBIDDEN")
+
 
 if __name__ == "__main__":
     unittest.main()

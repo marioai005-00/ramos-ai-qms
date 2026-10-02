@@ -72,6 +72,7 @@ python -m unittest discover -s tests -p "test_*.py"
 | `jhpark`, `eunsan.lee` | 단계 기안 |
 | `hskim`, `gh8229` | Leader |
 | `sahwang` | Champion |
+| `special2947` | 품질혁신팀 · 고객 부적합 접수, Case 진행 |
 | `thkwon`(TechL), `yspark`(WinPAC), `ojs`(CTST) | 외주 협력사 |
 
 전체 계정과 역할은 `qms_backend.py`의 `_seed_users`가 기준이다.
