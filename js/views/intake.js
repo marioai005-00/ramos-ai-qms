@@ -77,7 +77,8 @@
       { id: 'sales-benjamin', name: '빈철우_Benjamin', position: 'Pro', dept: '영업팀', email: 'cwbeen@ramostek.com', customerKeywords: [] }
     ];
 
-    const INTAKE_AUTHORIZED_DEPARTMENTS = ['전략소싱팀', '영업팀'];
+    // The quality innovation team registers too (user decision 2026-10-02).
+    const INTAKE_AUTHORIZED_DEPARTMENTS = ['전략소싱팀', '영업팀', '품질혁신팀'];
 
     const QUALITY_INTAKE_COORDINATOR = {
       name: '김성중',
@@ -98,7 +99,8 @@
     }
 
     function hasIntakeRegistrationAuthority(registrar = getIntakeRegistrar()) {
-      return hasMasterAuthority(registrar) || INTAKE_AUTHORIZED_DEPARTMENTS.includes(registrar.dept);
+      const isAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER?.email === registrar.email) && (CURRENT_USER.roles || []).includes('system_admin');
+      return isAdmin || INTAKE_AUTHORIZED_DEPARTMENTS.includes(registrar.dept);
     }
 
     function getFixedIntakeOwner(product = '') {
@@ -369,7 +371,7 @@
                   <i data-lucide="route" style="color:#22d3ee; width:17px; height:17px;"></i>
                   AI 접수 라우팅 & 담당자 자동 지정
                 </div>
-                <span class="intake-human-gate-badge">접수 권한: 전략소싱팀 · 영업팀</span>
+                <span class="intake-human-gate-badge">접수 권한: 전략소싱팀 · 영업팀 · 품질혁신팀</span>
               </div>
 
               <div class="intake-permission-strip ${hasRegistrationAuthority ? 'is-authorized' : 'is-restricted'}">
@@ -378,7 +380,7 @@
                   ? (isMasterRegistrar
                     ? `Master QA 권한이 확인되었습니다. 접수·검토 전 과정을 테스트할 수 있습니다.`
                     : `${intakeRegistrar.dept} 소속 접수 권한이 확인되었습니다. AI 추천 후 사람 확인을 거쳐 등록합니다.`)
-                  : `현재 로그인 계정은 ${intakeRegistrar.dept} 소속입니다. Case 접수 등록은 전략소싱팀(CS 포함)과 영업팀만 가능합니다.`}
+                  : `현재 로그인 계정은 ${intakeRegistrar.dept} 소속입니다. Case 접수 등록은 전략소싱팀(CS 포함), 영업팀, 품질혁신팀만 가능합니다.`}
                 </span>
               </div>
 
@@ -1342,7 +1344,7 @@
       if(intakeSubmitting)return;
       const intakeRegistrar = getIntakeRegistrar();
       if (!hasIntakeRegistrationAuthority(intakeRegistrar)) {
-        alert(`현재 로그인 계정은 ${intakeRegistrar.dept} 소속입니다.\n\n고객 부적합 접수는 전략소싱팀(CS 포함)과 영업팀 계정만 가능합니다.`);
+        alert(`현재 로그인 계정은 ${intakeRegistrar.dept} 소속입니다.\n\n고객 부적합 접수는 전략소싱팀(CS 포함), 영업팀, 품질혁신팀 계정만 가능합니다.`);
         return;
       }
 
