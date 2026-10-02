@@ -66,7 +66,11 @@ class MailTests(unittest.TestCase):
         message = self.sent()[0]
         self.assertEqual((message["To"], message["From"]), ("sjkim@ramostek.com", "qms@test.invalid"))
         self.assertTrue(message["Subject"].startswith("[QMS 시험]"))
-        self.assertIn("master@qms.local", message.get_content())
+        plain, html = message.get_body(("plain",)).get_content(), message.get_body(("html",)).get_content()
+        self.assertIn("master@qms.local", plain)
+        # The HTML part carries the same test-mode notice.
+        self.assertIn("master@qms.local", html)
+        self.assertIn("<table", html)
         self.smtp.return_value.starttls.assert_called_once()
         self.smtp.return_value.login.assert_called_once_with("qms@test.invalid", "secret-value")
 
@@ -81,6 +85,9 @@ class MailTests(unittest.TestCase):
         self.assertEqual(message["To"], "sjkim@ramostek.com")
         self.assertIn("INT-LATE", message["Subject"])
         self.assertIn("기한 초과", message["Subject"])
+        html = message.get_body(("html",)).get_content()
+        for expected in ("SLA 기한 초과", "INT-LATE", "3D 봉쇄 조치", "하루에 한 번"):
+            self.assertIn(expected, html)
         self.assertEqual([(item["kind"], item["status"], item["actual"]) for item in log], [("SLA", "SENT", ["sjkim@ramostek.com"])])
         # The people the alert was meant for are recorded even though only the test address received it.
         self.assertIn("sahwang@ramostek.com", log[0]["intended"])
@@ -150,8 +157,13 @@ class MailTests(unittest.TestCase):
             message = self.sent()[0]
             self.assertEqual(message["To"], "sjkim@ramostek.com")
             self.assertIn("[부적합 공유] RAMOS-8D-T-001 LG전자", message["Subject"])
+            plain, html = message.get_body(("plain",)).get_content(), message.get_body(("html",)).get_content()
             for expected in ("0QH321500A04-LPAGA00", "부팅 불가", "3 / 1000", "황선아", "jhpark@ramostek.com", "24시간"):
-                self.assertIn(expected, message.get_content())
+                self.assertIn(expected, plain)
+                self.assertIn(expected, html)
+            # Deadlines are counted from the recorded receipt time (2026-10-02 09:00).
+            for expected in ("10-03 09:00", "10-16 09:00", "11-01 09:00"):
+                self.assertIn(expected, html)
             # A changed team is told again.
             self.store.save_state(self.reviewer, self.case_state(True, team + [("Customer Quality", "김영업", "sales@ramostek.com")]), revision, "team change")
             log = self.store.mail_status(self.reviewer)["log"]
@@ -194,6 +206,15 @@ class MailTests(unittest.TestCase):
                 with self.assertRaises(QMSApiError) as caught:
                     call(identity)
                 self.assertEqual(caught.exception.code, "ROLE_FORBIDDEN")
+
+    def test_html_escapes_recorded_text(self):
+        state = self.case_state(True, [("8D Leader", "황선아", "sahwang@ramostek.com")])
+        state["cases"][0]["claimTitle"] = '<script>alert(1)</script> & "부팅 불가"'
+        with patch.dict(os.environ, SMTP_ENV):
+            self.store.save_state(self.reviewer, state, 0, "case")
+        html = self.sent()[0].get_body(("html",)).get_content()
+        self.assertNotIn("<script>", html)
+        self.assertIn("&lt;script&gt;", html)
 
 
 if __name__ == "__main__":

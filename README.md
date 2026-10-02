@@ -46,6 +46,7 @@ Copy-Item .env.example .env
 | `supplier_tickets.py` | 외주사 PCN·Issue 접수, 외주사 현황 집계 |
 | `assembly_defects.py` | 제품별 외주 조립 불량 |
 | `mailer.py` | 사내 알림 메일(SMTP) |
+| `mail_templates.py` | 알림 메일 HTML 양식 |
 | `stage_drafts.py` | D4~D8 근거 기반 초안 |
 | `report_export.py` | 8D 보고서 Excel 생성 |
 | `index.html`, `js/`, `css/` | 화면 |

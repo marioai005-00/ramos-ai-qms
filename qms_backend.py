@@ -964,7 +964,9 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
             } for row in rows]
         # Mail goes out after the database work, so a slow mail server never holds the lock.
         team_emails = {str(c.get("id")): self._team_emails(c) for c in record["state"].get("cases", []) if isinstance(c, dict)}
-        self._mail_sla_escalations(result, created_ids, team_emails)
+        records = {str(c.get("id")): c for c in record["state"].get("cases", []) if isinstance(c, dict)}
+        records.update({str(i.get("intakeId")): i for i in record["state"].get("intakeQueue", []) if isinstance(i, dict)})
+        self._mail_sla_escalations(result, created_ids, team_emails, records)
         return result
 
 

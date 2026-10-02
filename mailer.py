@@ -1,6 +1,7 @@
 """Internal notification mail over SMTP.
 
-Covers internal alerts only (SLA deadlines, a manual test message). Customer report dispatch stays a
+Covers internal alerts only (the D1 team share, SLA deadlines, a manual test message), sent as HTML with a
+plain-text fallback (layout in mail_templates.py). Customer report dispatch stays a
 manual step recorded in dispatch_outbox. While test mode is on, every message goes to one fixed address
 regardless of who it was meant for.
 """
@@ -15,6 +16,7 @@ from email.utils import formatdate, make_msgid
 from pathlib import Path
 
 from internal_quality import fail, now
+from mail_templates import case_share_html, sla_html, test_html
 
 SEND_ROLES = {"system_admin", "quality_reviewer"}
 DEFAULT_TEST_RECIPIENT = "sjkim@ramostek.com"
@@ -50,7 +52,7 @@ def mail_config(project_root: Path) -> dict:
     }
 
 
-def smtp_send(config: dict, recipients: list[str], subject: str, body: str) -> str:
+def smtp_send(config: dict, recipients: list[str], subject: str, body: str, html: str | None = None) -> str:
     message = EmailMessage()
     message["From"] = config["sender"]
     message["To"] = ", ".join(recipients)
@@ -58,6 +60,9 @@ def smtp_send(config: dict, recipients: list[str], subject: str, body: str) -> s
     message["Date"] = formatdate(localtime=True)
     message["Message-ID"] = make_msgid(domain="qms.local")
     message.set_content(body)
+    if html:
+        # The plain text stays as the fallback for clients that do not show HTML.
+        message.add_alternative(html, subtype="html")
     if config["security"] == "SSL":
         client = smtplib.SMTP_SSL(config["host"], config["port"], timeout=20, context=ssl.create_default_context())
     else:
@@ -113,14 +118,19 @@ class MailerMixin:
                      "createdAt": r["created_at"], "createdBy": r["created_by"]} for r in rows],
         }
 
-    def send_mail(self, actor: str, kind: str, ref: str, subject: str, body: str, intended: list[str], *, once: bool = False) -> dict:
-        """Send one notification and record the outcome. Never raises for delivery problems."""
+    def send_mail(self, actor: str, kind: str, ref: str, subject: str, body: str, intended: list[str], *, once: bool = False, html=None) -> dict:
+        """Send one notification and record the outcome. Never raises for delivery problems.
+
+        html is a function that takes the test-mode notice (empty outside test mode) and returns the HTML body.
+        """
         config = mail_config(self._mail_project_root())
         intended = sorted({address.strip() for address in intended if isinstance(address, str) and "@" in address})
         actual = [config["testRecipient"]] if config["testMode"] else intended
+        notice = ""
         if config["testMode"]:
+            notice = f"시험 모드로 발송된 메일입니다. 실제 발송 대상: {', '.join(intended) or '(없음)'}"
             subject = f"[QMS 시험] {subject}"
-            body = f"시험 모드로 발송된 메일입니다. 실제 발송 대상: {', '.join(intended) or '(없음)'}\n\n{body}"
+            body = f"{notice}\n\n{body}"
         status, error, message_id = "SENT", None, None
         if not config["enabled"]:
             status, error = "DISABLED", "메일 발송이 꺼져 있습니다 (QMS_MAIL_PROVIDER=SMTP, QMS_EXTERNAL_SEND_ENABLED=true 필요)."
@@ -142,7 +152,7 @@ class MailerMixin:
                 return {"status": "RETRY_LATER", "recipients": actual}
         if status == "SENT":
             try:
-                message_id = smtp_send(config, actual, subject, body)
+                message_id = smtp_send(config, actual, subject, body, html(notice) if html else None)
             except Exception as failure:  # delivery problems are recorded, not raised
                 status, error = "FAILED", f"{type(failure).__name__}: {failure}"[:500]
         with self._lock, self._connect() as db:
@@ -154,17 +164,19 @@ class MailerMixin:
     def send_test_mail(self, identity) -> dict:
         self._require_role(identity, SEND_ROLES)
         user = identity.user
+        requester, sent_at = f"{user.get('name', '')} ({user['username']})", f"{datetime.now(timezone(timedelta(hours=9))):%Y-%m-%d %H:%M}"
         result = self.send_mail(user["username"], "TEST", now(), "메일 발송 시험",
-                                f"RAMOS AI-QMS 8D 메일 발송 시험입니다.\n요청자: {user.get('name', '')} ({user['username']})\n시각: {now()}",
-                                [user.get("email", "")])
+                                f"RAMOS AI-QMS 8D 메일 발송 시험입니다.\n요청자: {requester}\n시각: {sent_at}",
+                                [user.get("email", "")], html=lambda notice: test_html([("요청자", requester), ("발송 시각", sent_at)], notice))
         if result["status"] != "SENT":
             fail(502 if result["status"] == "FAILED" else 409, result["error"] or "메일을 보내지 못했습니다.", "MAIL_" + result["status"])
         return result
 
-    def _mail_sla_escalations(self, escalations: list[dict], created_ids: list[int], team_emails: dict[str, list[str]]) -> None:
+    def _mail_sla_escalations(self, escalations: list[dict], created_ids: list[int], team_emails: dict[str, list[str]], records: dict[str, dict] | None = None) -> None:
         """Mail SLA alerts at the configured levels: once when an alert appears, and daily while it stays overdue."""
         config = mail_config(self._mail_project_root())
-        today = datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d")
+        current = datetime.now(timezone(timedelta(hours=9)))
+        today = current.strftime("%Y-%m-%d")
         role_holders = None
         for item in escalations:
             overdue = item["level"] == "L3_OVERDUE"
@@ -186,7 +198,8 @@ class MailerMixin:
                     + "QMS 포털에서 해당 건을 확인해 주세요. 이 메일은 시스템이 자동으로 보냈습니다.")
             # An overdue alert is keyed by day so it repeats daily; the other levels are sent once.
             ref = f"{item['id']}:{today}" if overdue else str(item["id"])
-            self.send_mail("scheduler", "SLA", ref, f"[SLA {label}] {item['caseId']} {item['milestone']}", body, intended, once=True)
+            self.send_mail("scheduler", "SLA", ref, f"[SLA {label}] {item['caseId']} {item['milestone']}", body, intended, once=True,
+                           html=lambda notice, item=item: sla_html(item, (records or {}).get(item["caseId"]), current, notice))
 
     @staticmethod
     def _team_emails(case: dict) -> list[str]:
@@ -212,4 +225,5 @@ class MailerMixin:
                     f"기한: 3D(봉쇄) 접수 후 24시간, 5D(원인·대책) 14일, 8D(종결) 30일\n\n대응 팀\n{team}\n\n"
                     "QMS 포털에서 Case를 확인해 주세요. 이 메일은 시스템이 자동으로 보냈습니다.")
             ref = f"{case.get('id')}:{hashlib.sha256(','.join(emails).encode('utf-8')).hexdigest()[:16]}"
-            self.send_mail(actor, "CASE_SHARE", ref, f"[부적합 공유] {case.get('id')} {field('customer')} {field('claimTitle')}", body, emails, once=True)
+            self.send_mail(actor, "CASE_SHARE", ref, f"[부적합 공유] {case.get('id')} {field('customer')} {field('claimTitle')}", body, emails, once=True,
+                           html=lambda notice, case=case: case_share_html(case, notice))
