@@ -82,3 +82,26 @@
 .d5-strength-prevent { color: #22d3ee; border-color: #22d3ee; }
 .d5-strength-detect { color: #f59e0b; border-color: #f59e0b; }
 .d5-strength-administrative { color: #ef4444; border-color: #ef4444; }
+
+/* D6 validation assistant */
+.d6-formula { font-size: 0.68rem; font-weight: 600; color: var(--text-secondary); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; margin-left: 6px; }
+.d6-inline-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.d6-inline-form label { display: flex; flex-direction: column; gap: 4px; font-size: 0.74rem; color: var(--text-secondary); font-weight: 700; min-width: 120px; }
+.d6-inline-form .form-control { min-width: 120px; }
+.d6-result { margin: 10px 0 0; font-size: 0.82rem; color: var(--text-primary); line-height: 1.55; }
+.d6-result b { font-size: 1rem; }
+.d6-warn { color: #f59e0b; font-size: 0.78rem; }
+.d6-read-result { margin-top: 12px; border-top: 1px dashed var(--border); padding-top: 10px; font-size: 0.8rem; }
+.d6-read-result p { margin: 6px 0; line-height: 1.55; color: var(--text-primary); }
+.d6-checks { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem; }
+.d6-checks li { padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border); color: var(--text-primary); }
+.d6-checks b { display: inline-block; min-width: 38px; }
+.d6-check-block { border-color: #ef4444 !important; } .d6-check-block b { color: #ef4444; }
+.d6-check-warn { border-color: #f59e0b !important; } .d6-check-warn b { color: #f59e0b; }
+.d6-check-ok { border-color: #10b981 !important; } .d6-check-ok b { color: #10b981; }
+.d6-template-modal { padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; color: var(--text-primary); }
+.d6-template-modal header { display: flex; justify-content: space-between; gap: 16px; }
+.d6-template-modal h3 { margin: 2px 0 4px; }
+.d6-template-modal p { margin: 0; font-size: 0.78rem; color: var(--text-secondary); }
+.d6-template-list { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 0.78rem; }
+.d6-template-list ul { list-style: none; display: flex; gap: 6px; margin: 0; padding: 0; flex-wrap: wrap; }

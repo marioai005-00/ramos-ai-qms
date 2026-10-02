@@ -30,6 +30,8 @@ import urllib.parse
 from agent_runtime import AgentRuntime
 from qms_backend import QMSApiError, QMSStore
 import action_advisor
+import validation_advisor
+import validation_stats
 import tool_advisor
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -425,6 +427,63 @@ def advise_d5_actions(identity, params: dict) -> dict:
     return QMS_STORE.record_d5_action_advice(identity, case["id"], revision, provider, advice)
 
 
+def plan_d6_tests(identity, params: dict) -> dict:
+    """Ask an external AI how to test each corrective action selected in D5. Sample sizes are calculated, not asked for."""
+    case, revision = QMS_STORE.d6_plan_context(identity, params)
+    provider, advice = ask_ai_for_advice(validation_advisor.build_plan_prompt(case), validation_advisor.PLAN_SYSTEM_PROMPT,
+                                         lambda text: validation_advisor.parse_plan(text, case))
+    QMS_STORE.record_d6_ai(identity, "D6_TEST_PLAN_GENERATED", case["id"], revision, provider, {"plans": len(advice["plans"])})
+    return {"caseId": case["id"], "engine": validation_advisor.PLAN_ENGINE, "provider": provider.get("engine"), "model": provider.get("model"),
+            "generatedAt": validation_advisor.now(), "caseRevision": revision, **advice}
+
+
+def read_d6_report(identity, params: dict) -> dict:
+    """Read an uploaded test report against the registered report template."""
+    case, revision, test, template = QMS_STORE.d6_read_context(identity, params)
+    report = validation_advisor.decode_report(params.get("file"))
+    prompt = validation_advisor.build_read_prompt(template, test, report)
+    parse = lambda text: validation_advisor.parse_report(text, template, test, case)
+    if report.get("attachment"):
+        # Only Gemini reads PDF and image files here.
+        result = call_gemini(prompt, validation_advisor.READ_SYSTEM_PROMPT, attachments=[report["attachment"]], max_tokens=4000)
+        if not result.get("success"):
+            raise QMSApiError(502, f"성적서를 읽지 못했습니다. Gemini: {result.get('error')}", code="AI_UNAVAILABLE")
+        try:
+            provider, reading = result, parse(str(result.get("text", "")))
+        except ValueError as error:
+            raise QMSApiError(502, f"성적서를 읽지 못했습니다. {error}", code="AI_UNAVAILABLE") from error
+    else:
+        provider, reading = ask_ai_for_advice(prompt, validation_advisor.READ_SYSTEM_PROMPT, parse)
+    QMS_STORE.record_d6_ai(identity, "D6_REPORT_READ", case["id"], revision, provider,
+                           {"testId": test.get("id"), "file": report["name"], "template": template["name"], "proposal": reading["proposal"]["result"]})
+    return {"caseId": case["id"], "engine": validation_advisor.READ_ENGINE, "provider": provider.get("engine"), "model": provider.get("model"),
+            "generatedAt": validation_advisor.now(), **reading}
+
+
+def d6_statistics(identity, params: dict) -> dict:
+    """Sample size and before/after comparison by formula."""
+    QMS_STORE._internal_permission(identity)
+    def number(value, name, low=None, high=None):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or (low is not None and value < low) or (high is not None and value > high):
+            raise QMSApiError(400, f"{name} 값을 확인하세요.", code="INVALID_STATISTICS")
+        return value
+    confidence = number(params.get("confidence", 0.9), "신뢰도", 0.5, 0.999)
+    try:
+        if params.get("kind") == "sampleSize":
+            target = number(params.get("targetPpm"), "목표 불량률", 1, 999999) / 1_000_000
+            allowed = int(number(params.get("allowedFailures", 0), "허용 불량 수", 0, 20))
+            return validation_stats.sample_size_plan(target, confidence, allowed)
+        if params.get("kind") == "compare":
+            before, after = params.get("before") or {}, params.get("after") or {}
+            counts = [int(number((before if i < 2 else after).get(k), "수량", 0)) for i, k in enumerate(("fail", "n", "fail", "n"))]
+            target = params.get("targetPpm")
+            return validation_stats.compare_rates(*counts, confidence=confidence,
+                                                  target_rate=None if target is None else number(target, "기준 불량률", 1, 999999) / 1_000_000)
+    except ValueError as error:
+        raise QMSApiError(400, str(error), code="INVALID_STATISTICS") from error
+    raise QMSApiError(400, "계산 종류를 지정하세요.", code="INVALID_STATISTICS")
+
+
 class PortalHandler(SimpleHTTPRequestHandler):
     def _send_json(self, status: int, value: object, *, cookies: list[str] | None = None) -> None:
         body = json.dumps(value, ensure_ascii=False).encode("utf-8")
@@ -673,7 +732,7 @@ class PortalHandler(SimpleHTTPRequestHandler):
         qms_paths = {
             "/__api__/auth/login", "/__api__/auth/logout", "/__api__/auth/change-password",
             "/__api__/qms/supplier-notices", "/__api__/qms/supplier-tickets", "/__api__/qms/assembly-defects", "/__api__/qms/internal-quality", "/__api__/qms/state", "/__api__/qms/stage-version", "/__api__/qms/approval",
-            "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/ai/stage-draft", "/__api__/qms/ai/d4-tool-advice", "/__api__/qms/ai/d5-action-advice", "/__api__/qms/records/delete", "/__api__/qms/mail/test", "/__api__/qms/escalations/evaluate",
+            "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/ai/stage-draft", "/__api__/qms/ai/d4-tool-advice", "/__api__/qms/ai/d5-action-advice", "/__api__/qms/ai/d6-test-plan", "/__api__/qms/ai/d6-read-report", "/__api__/qms/d6/statistics", "/__api__/qms/d6/checks", "/__api__/qms/records/delete", "/__api__/qms/mail/test", "/__api__/qms/escalations/evaluate",
             "/__api__/qms/agent-runs", "/__api__/qms/scheduler/evaluate",
         }
         if clean_path not in qms_paths and not agent_run_action and not case_source_action and not finding_action and not evidence_upload and not internal_update and not notice_update and not ticket_update and not assembly_update:
@@ -767,6 +826,14 @@ class PortalHandler(SimpleHTTPRequestHandler):
             self._send_json(200, {"success": True, **QMS_STORE.send_test_mail(identity)})
         elif clean_path == "/__api__/qms/records/delete":
             self._send_json(200, {"success": True, **QMS_STORE.delete_record(identity, params)})
+        elif clean_path == "/__api__/qms/ai/d6-test-plan":
+            self._send_json(200, {"success": True, "plan": plan_d6_tests(identity, params)})
+        elif clean_path == "/__api__/qms/ai/d6-read-report":
+            self._send_json(200, {"success": True, "reading": read_d6_report(identity, params)})
+        elif clean_path == "/__api__/qms/d6/statistics":
+            self._send_json(200, {"success": True, "result": d6_statistics(identity, params)})
+        elif clean_path == "/__api__/qms/d6/checks":
+            self._send_json(200, {"success": True, **QMS_STORE.d6_checks(identity, params)})
         elif clean_path == "/__api__/qms/ai/d5-action-advice":
             self._send_json(200, {"success": True, "advice": advise_d5_actions(identity, params)})
         elif clean_path == "/__api__/qms/ai/d4-tool-advice":

@@ -108,9 +108,10 @@ from report_export import ReportExportMixin
 from stage_drafts import StageDraftMixin
 from tool_advisor import ToolAdvisorMixin
 from action_advisor import ActionAdvisorMixin
+from validation_advisor import ValidationAdvisorMixin
 
 
-class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin, SupplierSummaryMixin, AssemblyDefectsMixin, StageDraftMixin, ToolAdvisorMixin, ActionAdvisorMixin, ReportExportMixin, MailerMixin):
+class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin, SupplierSummaryMixin, AssemblyDefectsMixin, StageDraftMixin, ToolAdvisorMixin, ActionAdvisorMixin, ValidationAdvisorMixin, ReportExportMixin, MailerMixin):
     """Thread-safe SQLite store used by the local portal server."""
 
     def __init__(self, project_root: Path):

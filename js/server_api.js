@@ -100,7 +100,9 @@
   function businessState(source) {
     return {
       cases: Array.isArray(source?.cases) ? source.cases : [],
-      intakeQueue: Array.isArray(source?.intakeQueue) ? source.intakeQueue : []
+      intakeQueue: Array.isArray(source?.intakeQueue) ? source.intakeQueue : [],
+      // Report templates are shared by everyone who reads D6 test reports.
+      reportTemplates: Array.isArray(source?.reportTemplates) ? source.reportTemplates : []
     };
   }
 
@@ -245,6 +247,23 @@
     return result;
   }
 
+  async function d6TestPlan(caseId) {
+    return (await request('/__api__/qms/ai/d6-test-plan', { method: 'POST', body: { caseId } })).plan;
+  }
+
+  async function d6ReadReport(caseId, testId, template, file) {
+    const dataUrl = await fileAsDataURL(file);
+    return (await request('/__api__/qms/ai/d6-read-report', { method: 'POST', body: { caseId, testId, template, file: { name: file.name, dataUrl } } })).reading;
+  }
+
+  async function d6Statistics(body) {
+    return (await request('/__api__/qms/d6/statistics', { method: 'POST', body })).result;
+  }
+
+  async function d6Checks(caseId) {
+    return await request('/__api__/qms/d6/checks', { method: 'POST', body: { caseId } });
+  }
+
   async function d5ActionAdvice(caseId) {
     const payload = await request('/__api__/qms/ai/d5-action-advice', { method: 'POST', body: { caseId } });
     return payload.advice;
@@ -359,6 +378,10 @@
     generateStageDraft,
     d4ToolAdvice,
     d5ActionAdvice,
+    d6TestPlan,
+    d6ReadReport,
+    d6Statistics,
+    d6Checks,
     supplierSummary,
     downloadCaseReport,
     evaluateEscalations,
