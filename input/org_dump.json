@@ -1,0 +1,508 @@
+{
+  "headers": [
+    "부문",
+    "",
+    "팀",
+    "직위",
+    "이름",
+    "이메일"
+  ],
+  "rows": [
+    [
+      "COO 직속",
+      "COO 직속",
+      "COO 직속",
+      "COO_부사장",
+      "윤석재",
+      "sjyun@ramostek.com"
+    ],
+    [
+      "COO 직속",
+      "제조기획센터",
+      "IT_보안팀",
+      "팀장_P.Pro",
+      "이우진",
+      "lwj@ramostek.com"
+    ],
+    [
+      "COO 직속",
+      "제조기획센터",
+      "IT_보안팀",
+      "Pro",
+      "김기서",
+      "kskim@ramostek.com"
+    ],
+    [
+      "COO 직속",
+      "제조기획센터",
+      "IT_보안팀",
+      "Pro",
+      "김도현",
+      "dohyun20.kim@ramostek.com"
+    ],
+    [
+      "COO 직속",
+      "제조기획센터",
+      "계획운영그룹",
+      "그룹장_P.Pro",
+      "공아름",
+      "loveskr@ramostek.com"
+    ],
+    [
+      "COO 직속",
+      "제조기획센터",
+      "계획운영그룹",
+      "Senior Pro",
+      "강순자",
+      "daks3539@ramostek.com"
+    ],
+    [
+      "COO 직속",
+      "제조기획센터",
+      "계획운영그룹",
+      "Pro",
+      "김현수_제조",
+      "kimhs@ramostek.com"
+    ],
+    [
+      "COO 직속",
+      "제조기획센터",
+      "외주운영그룹",
+      "Pro",
+      "김혜원",
+      "hyewon@ramostek.com"
+    ],
+    [
+      "COO 직속",
+      "제조기획센터",
+      "외주운영그룹",
+      "Pro",
+      "오승현",
+      "shoh@ramostek.com"
+    ],
+    [
+      "COO 직속",
+      "제조기획센터",
+      "자원운영그룹",
+      "그룹장_P.Pro",
+      "조철민",
+      "nrjcm@ramostek.com"
+    ],
+    [
+      "COO 직속",
+      "제조기획센터",
+      "자원운영그룹",
+      "Pro",
+      "우정우",
+      "jwwoo@ramostek.com"
+    ],
+    [
+      "COO 직속",
+      "제조기획센터",
+      "제조기획센터",
+      "센터장_상무",
+      "이은산",
+      "eunsan.lee@ramostek.com"
+    ],
+    [
+      "대표이사",
+      "대표이사",
+      "대표이사",
+      "대표이사",
+      "조장호",
+      "jh.choue66@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "DRAM 개발실",
+      "DRAM 개발1팀",
+      "Principal Pro",
+      "박재훈",
+      "hope@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "DRAM 개발실",
+      "DRAM 개발1팀",
+      "Principal Pro",
+      "배진성",
+      "sean@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "DRAM 개발실",
+      "DRAM 개발2팀",
+      "팀장_P.Pro",
+      "신덕용",
+      "satiou@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "DRAM 개발실",
+      "DRAM 개발2팀",
+      "Pro",
+      "정선혁",
+      "jsh@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "DRAM 개발실",
+      "DRAM 개발실",
+      "실장_상무",
+      "박철홍",
+      "chpark@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "DRAM 개발실",
+      "DRAM 개발실",
+      "담당_팀장_이사",
+      "이민호",
+      "aden@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "Flash개발실",
+      "Flash 개발1팀",
+      "팀장_S.Pro",
+      "정현석",
+      "hsjeong@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "Flash개발실",
+      "Flash 개발1팀",
+      "Pro",
+      "김영태",
+      "ytkim@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "Flash개발실",
+      "Flash 개발1팀",
+      "Pro",
+      "심병진",
+      "bjsim@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "Flash개발실",
+      "Flash 개발1팀",
+      "Pro",
+      "양태욱",
+      "tuyang@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "Flash개발실",
+      "Flash 개발2팀",
+      "팀장_S.Pro",
+      "박재환",
+      "jhpark@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "Flash개발실",
+      "Flash 개발2팀",
+      "Senior Pro",
+      "정유석",
+      "jys@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "Flash개발실",
+      "Flash 개발2팀",
+      "Pro",
+      "김상우",
+      "sangwoo2352@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "Flash개발실",
+      "Flash 개발2팀",
+      "Pro",
+      "김태규",
+      "ktgstar2007@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "Flash개발실",
+      "Flash 개발2팀",
+      "Pro",
+      "조성근",
+      "sg.cho@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "Flash개발실",
+      "Flash 개발3팀",
+      "팀장_P.Pro",
+      "이성우",
+      "fog1007@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "Flash개발실",
+      "Flash 개발3팀",
+      "Pro",
+      "김유진",
+      "yjkim@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "Flash개발실",
+      "Flash 개발3팀",
+      "Pro",
+      "홍종혁",
+      "jhhong@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "Flash개발실",
+      "Flash 개발실",
+      "실장_상무",
+      "김현수",
+      "hskim@ramostek.com"
+    ],
+    [
+      "알앤디부문",
+      "알앤디부문",
+      "알앤디부문",
+      "부문장_전무",
+      "박정훈",
+      "gh8229@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "영업부문",
+      "영업부문",
+      "부문장_전무",
+      "Robin_Myung_명노광",
+      "rkmyung@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "영업부문",
+      "영업팀",
+      "팀장_P.Pro",
+      "Sahong_Kim_김사홍",
+      "shk@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "영업부문",
+      "영업팀",
+      "Pro",
+      "Aria_김애정",
+      "anasta@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "영업부문",
+      "영업팀",
+      "Pro",
+      "Jinyi Ahn_안진의",
+      "jinyi711@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "영업부문",
+      "영업팀",
+      "Pro",
+      "Jun Lee_이학준",
+      "junlee@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "영업부문",
+      "영업팀",
+      "Pro",
+      "Martin Lee_이지훈",
+      "homebot@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "영업부문",
+      "영업팀",
+      "Pro",
+      "Roen Kim_김려은",
+      "roenkim@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "영업부문",
+      "영업팀",
+      "Pro",
+      "Selly Park_박소진",
+      "sjpark@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "영업부문",
+      "영업팀",
+      "Pro",
+      "빈철우_Benjamin",
+      "cwbeen@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "전략 마케팅실",
+      "전략 마케팅실",
+      "실장_부사장",
+      "손동우",
+      "bigsohn@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "전략 마케팅실",
+      "전략소싱팀",
+      "팀장_이사",
+      "John_Woo_우준수",
+      "johnwoo@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "전략 마케팅실",
+      "전략소싱팀",
+      "Pro",
+      "강병주",
+      "kbj8420@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "전략 마케팅실",
+      "전략소싱팀",
+      "Pro",
+      "남서현",
+      "shnam1228@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "전략 마케팅실",
+      "전략소싱팀",
+      "Pro",
+      "이하영",
+      "lhyduddlgk@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "전략 마케팅실",
+      "품질혁신팀",
+      "팀장_상무",
+      "황승안",
+      "sahwang@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "전략 마케팅실",
+      "품질혁신팀",
+      "Senior Pro",
+      "김성중",
+      "sjkim@ramostek.com"
+    ],
+    [
+      "전략 마케팅실",
+      "전략 마케팅실",
+      "품질혁신팀",
+      "Pro",
+      "이봉건",
+      "special2947@ramostek.com"
+    ],
+    [
+      "전략경영부문",
+      "전략경영부문",
+      "인프라혁신팀",
+      "팀장_P.Pro",
+      "이상주",
+      "sjlee@ramostek.com"
+    ],
+    [
+      "전략경영부문",
+      "전략경영부문",
+      "인프라혁신팀",
+      "Pro",
+      "탁현준",
+      "thj@ramostek.com"
+    ],
+    [
+      "전략경영부문",
+      "전략경영부문",
+      "전략1팀",
+      "Senior Pro",
+      "박상연",
+      "parksy@ramostek.com"
+    ],
+    [
+      "전략경영부문",
+      "전략경영부문",
+      "전략1팀",
+      "Pro",
+      "고현우",
+      "hwko@ramostek.com"
+    ],
+    [
+      "전략경영부문",
+      "전략경영부문",
+      "전략1팀",
+      "Pro",
+      "박중민",
+      "jungmin16@ramostek.com"
+    ],
+    [
+      "전략경영부문",
+      "전략경영부문",
+      "전략2팀",
+      "Pro",
+      "고진규",
+      "wlsrb9010@ramostek.com"
+    ],
+    [
+      "전략경영부문",
+      "전략경영부문",
+      "전략2팀",
+      "Pro",
+      "김아영",
+      "kay153@ramostek.com"
+    ],
+    [
+      "전략경영부문",
+      "전략경영부문",
+      "전략2팀",
+      "Pro",
+      "김혜성",
+      "hyeskim@ramostek.com"
+    ],
+    [
+      "전략경영부문",
+      "전략경영부문",
+      "전략경영부문",
+      "부문장_전무",
+      "이제현",
+      "jaylee@ramostek.com"
+    ],
+    [
+      "전략경영부문",
+      "전략경영부문",
+      "전략1팀/2팀",
+      "담당_팀장_이사",
+      "이용희",
+      "iscra74@ramostek.com"
+    ],
+    [
+      "전략경영부문",
+      "전략경영부문",
+      "피플그룹",
+      "그룹장_P.Pro",
+      "고미영",
+      "turf2313@ramostek.com"
+    ],
+    [
+      "전략경영부문",
+      "전략경영부문",
+      "피플그룹",
+      "Senior Pro",
+      "윤선혜",
+      "shyun@ramostek.com"
+    ]
+  ]
+}

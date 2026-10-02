@@ -1,0 +1,3 @@
+# AI-QMS 8D System Requirements
+beautifulsoup4>=4.12.0
+colorama>=0.4.6

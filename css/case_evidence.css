@@ -1,0 +1,30 @@
+@media screen {
+.case-evidence-panel {padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);margin:16px 0;}
+.case-evidence-heading {display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.case-evidence-heading h3 {display:flex;align-items:center;gap:8px;margin:0;font-size:15px;color:var(--text-primary);overflow-wrap:anywhere;}
+.case-evidence-heading svg {width:16px;height:16px;flex-shrink:0;color:var(--accent);}
+.case-evidence-heading p,.case-evidence-preview>p {margin:6px 0 12px;font-size:13px;line-height:1.6;color:var(--text-secondary);}
+.case-evidence-upload {display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px;padding:14px;border:1px dashed var(--border);border-radius:6px;background:var(--bg-body);}
+.case-evidence-upload.is-dragging {border-color:var(--accent);}
+.case-evidence-upload label {display:flex;flex-direction:column;gap:6px;min-width:180px;font-size:13px;color:var(--text-primary);}
+.case-evidence-help {flex-basis:100%;margin:0;font-size:12px;line-height:1.6;color:var(--text-secondary);}
+.case-evidence-status {font-size:13px;line-height:1.6;color:var(--text-primary);overflow-wrap:anywhere;}
+.case-evidence-status:empty {display:none;}
+.case-evidence-empty {padding:18px 8px;font-size:13px;color:var(--text-secondary);}
+.case-evidence-list {list-style:none;margin:0;padding:0;}
+.case-evidence-list li {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 4px;border-bottom:1px solid var(--border);}
+.case-evidence-file {min-width:0;display:flex;flex-direction:column;gap:5px;overflow-wrap:anywhere;}
+.case-evidence-file strong {font-size:13px;color:var(--text-primary);}
+.case-evidence-file span {font-size:12px;color:var(--text-secondary);}
+.case-evidence-file-actions {display:flex;flex-wrap:wrap;gap:8px;flex-shrink:0;font-size:12px;color:var(--text-secondary);}
+.case-evidence-preview-content {margin:16px 0;max-height:65vh;overflow:auto;}
+.case-evidence-preview-content img {display:block;max-width:100%;height:auto;margin:auto;}
+.case-evidence-preview-content iframe {width:100%;height:60vh;border:1px solid var(--border);background:white;}
+.case-evidence-preview-content pre {white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;color:var(--text-primary);}
+@media (max-width:760px) {
+ .case-evidence-heading {flex-wrap:wrap;}
+ .case-evidence-upload label {width:100%;min-width:0;}
+ .case-evidence-list li {align-items:flex-start;flex-direction:column;}
+ .case-evidence-panel {padding:12px;}
+}
+}

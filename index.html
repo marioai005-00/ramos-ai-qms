@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAMOS AI-Based 8D Quality Problem Solving Platform</title>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js for Visual Watchtowers -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Local SheetJS parser: ERP/MES Excel files are processed inside the browser -->
+  <script src="js/vendor/xlsx.full.min.js"></script>
+
+  <!-- Modular Portal Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css?v=20260922_light_v2">
+  <link rel="stylesheet" href="css/agent_operations.css?v=20261002_readability_v1">
+  <link rel="stylesheet" href="css/ui_readability.css?v=20261002_theme_v5">
+  <link rel="stylesheet" href="css/case_evidence.css?v=20261002_evidence_v1">
+  <link rel="stylesheet" href="css/ui_consistency.css?v=20261002_uniform_v2">
+  <link rel="stylesheet" href="css/internal_quality.css?v=20261002_supplier_notices_v1">
+  <link rel="stylesheet" href="css/triage_result.css?v=20261002_triage_result_v3">
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('RAMOS_THEME') || 'dark';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <!-- ========================================================================= -->
+  <!-- ENTERPRISE AUTHENTICATION & LOGIN OVERLAY SCREEN                          -->
+  <!-- ========================================================================= -->
+  <div id="loginScreen" style="display:none;">
+    <div class="login-card">
+      <div class="login-brand-icon">
+        <i data-lucide="shield-check" style="width:28px; height:28px; color:#fff;"></i>
+      </div>
+      <div style="text-align:center; margin-bottom:22px;">
+        <h2 style="font-size:1.35rem; font-weight:900; color:var(--text-primary); letter-spacing:-0.02em;">RAMOS AI-QMS 8D</h2>
+        <p style="font-size:0.78rem; color:#94a3b8; margin-top:4px;">라모스테크놀러지 부적합 8D 품질 문제 해결 관제 플랫폼</p>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label" style="color:var(--text-secondary); font-weight:700; font-size:0.76rem;">
+            <span>사내 계정 ID (이메일 @ 앞자리)</span>
+          </label>
+          <div style="position:relative;">
+            <input type="text" id="loginUsername" class="form-control" placeholder="예: sjkim, hskim, jhpark, sahwang" required style="padding-left:36px; font-weight:600; font-size:0.84rem;">
+            <i data-lucide="user" style="position:absolute; left:12px; top:11px; width:15px; height:15px; color:#60a5fa;"></i>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+          <label class="form-label" style="color:var(--text-secondary); font-weight:700; font-size:0.76rem;">
+            <span>비밀번호</span>
+            <span style="font-size:0.68rem; color:#38bdf8;">전사 기본 PW: 1</span>
+          </label>
+          <div style="position:relative;">
+            <input type="password" id="loginPassword" class="form-control" value="1" placeholder="비밀번호" required style="padding-left:36px; font-weight:700; font-size:0.84rem;">
+            <i data-lucide="lock" style="position:absolute; left:12px; top:11px; width:15px; height:15px; color:#60a5fa;"></i>
+          </div>
+        </div>
+
+        <div id="loginErrorMsg" style="display:none; color:#f87171; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:8px 12px; font-size:0.76rem; margin-bottom:14px; text-align:center;">
+          ⚠️ 아이디 또는 비밀번호가 올바르지 않습니다.
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; padding:10px; font-size:0.88rem; font-weight:800; justify-content:center;">
+          <i data-lucide="log-in" style="width:15px; height:15px;"></i> 8D 시스템 로그인 (Sign In)
+        </button>
+      </form>
+
+      <!-- Quick Persona 1-Click Login Section -->
+      <div style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px;">
+        <div style="font-size:0.72rem; color:#94a3b8; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between;">
+          <span>⚡ 빠른 테스트 로그인 (1-Click Persona)</span>
+          <span style="color:#60a5fa;">전사 62명 계정 지원</span>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+          <button type="button" class="quick-persona-chip" onclick="handleQuickLogin('sjkim')" title="라모스 본사 SQE 품질 실무 간사">
+            <span>⭐ 김성중 S.Pro</span> <span style="font-size:0.65rem; color:#60a5fa;">sjkim (본사SQE)</span>
+          </button>
+          <button type="button" class="quick-persona-chip" onclick="handleQuickLogin('thkwon')" style="border-color:#f97316; background:rgba(249,115,22,0.12);" title="TechL 외주 협력사 담당자">
+            <span>🏭 권태훈 부장</span> <span style="font-size:0.65rem; color:#f97316; font-weight:700;">TechL</span>
+          </button>
+          <button type="button" class="quick-persona-chip" onclick="handleQuickLogin('yspark')" style="border-color:#f97316; background:rgba(249,115,22,0.12);" title="WinPAC 외주 협력사 담당자">
+            <span>🏭 박영수 차장</span> <span style="font-size:0.65rem; color:#f97316; font-weight:700;">WinPAC</span>
+          </button>
+          <button type="button" class="quick-persona-chip" onclick="handleQuickLogin('sangwook.ki')" style="border-color:#f97316; background:rgba(249,115,22,0.12);" title="SSPC 외주 협력사 담당자">
+            <span>🏭 기상욱 팀장</span> <span style="font-size:0.65rem; color:#f97316; font-weight:700;">SSPC</span>
+          </button>
+          <button type="button" class="quick-persona-chip" onclick="handleQuickLogin('ojs')" style="border-color:#f97316; background:rgba(249,115,22,0.12);" title="CTST 외주 협력사 담당자">
+            <span>🏭 오재수 그룹장</span> <span style="font-size:0.65rem; color:#f97316; font-weight:700;">CTST</span>
+          </button>
+          <button type="button" class="quick-persona-chip" onclick="handleQuickLogin('hskim')">
+            <span>👑 김현수 상무</span> <span style="font-size:0.65rem; color:#60a5fa;">hskim (리더)</span>
+          </button>
+          <button type="button" class="quick-persona-chip" onclick="handleQuickLogin('jhpark')">
+            <span>🔬 박재환 팀장</span> <span style="font-size:0.65rem; color:#60a5fa;">jhpark (FA)</span>
+          </button>
+          <button type="button" class="quick-persona-chip" onclick="handleQuickLogin('sahwang')">
+            <span>🏛️ 황승안 상무</span> <span style="font-size:0.65rem; color:#60a5fa;">sahwang (총괄)</span>
+          </button>
+          <button type="button" class="quick-persona-chip" onclick="handleQuickLogin('jh.choue66')">
+            <span>👔 조장호 대표</span> <span style="font-size:0.65rem; color:#60a5fa;">jh.choue66 (CEO)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ========================================================================= -->
+  <!-- SIDEBAR NAVIGATION & RAMOS ORG TREE                                       -->
+  <!-- ========================================================================= -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+        <i data-lucide="shield-alert" style="color: #60a5fa; width: 22px; height: 22px; flex-shrink:0;"></i>
+        <div style="min-width:0;">
+          <div style="line-height: 1.1; font-weight:800; font-size:0.95rem; color:var(--text-primary); white-space:nowrap;">AI-QMS 8D</div>
+          <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 500; white-space:nowrap;">Quality Commander</div>
+        </div>
+      </div>
+
+      <div class="sidebar-brand-actions">
+        <button type="button" id="mobileNavToggle" class="mobile-nav-toggle" onclick="toggleNavigationMenu()" aria-expanded="false" aria-controls="sidebarMenuView sidebarOrgView">메뉴</button>
+        <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" aria-label="화면 테마 전환" title="화면 테마 전환">
+          <i data-lucide="sun" id="themeToggleIcon"></i>
+          <span id="themeToggleText" class="sr-only">라이트 모드</span>
+        </button>
+        <span class="sidebar-brand-badge">ENTERPRISE</span>
+      </div>
+    </div>
+
+    <!-- Dual Sidebar Navigation Tabs -->
+    <div class="sidebar-tabs">
+      <button class="sidebar-tab-btn active" id="tabBtnMenu" onclick="switchSidebarTab('menu')">
+        <i data-lucide="layout-grid" style="width: 14px; height: 14px;"></i>
+        <span>8D 워크스페이스</span>
+      </button>
+      <button class="sidebar-tab-btn" id="tabBtnOrg" onclick="switchSidebarTab('org')">
+        <i data-lucide="network" style="width: 14px; height: 14px;"></i>
+        <span>RAmos 조직도</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: 8D WORKSPACE MENU -->
+    <div class="sidebar-content" id="sidebarMenuView">
+      <div class="menu-cat" id="menuCatOverview">Dashboard & Overview</div>
+      <a class="nav-item active" id="navItemDashboard" onclick="switchNav('dashboard', this)">
+        <i data-lucide="layout-dashboard" style="width: 16px; height: 16px;"></i>
+        <span>종합 관제탑 (Dashboard)</span>
+      </a>
+      <a class="nav-item" id="nav-mission-control" onclick="switchNav('mission-control', this)">
+        <i data-lucide="bot" style="width: 16px; height: 16px;"></i>
+        <span>자율 8D AI 미션 컨트롤</span>
+        <span class="nav-auto-badge">AUTO</span>
+      </a>
+      <a class="nav-item" id="nav-agent-operations" onclick="switchNav('agent-operations', this)">
+        <i data-lucide="workflow" style="width: 16px; height: 16px; color:#22d3ee;"></i>
+        <span>Agent Operations</span>
+        <span class="nav-auto-badge" style="background:rgba(8,145,178,.16);color:#67e8f9;border-color:#0891b2;">GOV</span>
+      </a>
+      <div id="supplierQualityNavSection" role="group" aria-labelledby="menuCatSupplierQuality">
+        <div class="menu-cat" id="menuCatSupplierQuality">외주 품질 관리</div>
+        <a class="nav-item" id="nav-supplier-portal" onclick="switchNav('supplier-pcn', this)">
+          <i data-lucide="factory" style="width:16px;height:16px;color:#f97316;"></i>
+          <span id="navSupplierPortalText">PCN 변경 관리</span>
+        </a>
+        <a class="nav-item" id="nav-supplier-issues" onclick="switchNav('supplier-issues', this)">
+          <i data-lucide="triangle-alert" style="width:16px;height:16px;color:#f97316;"></i>
+          <span>Issue·부적합 관리</span>
+        </a>
+        <a class="nav-item" id="nav-supplier-notices" onclick="switchNav('supplier-notices', this)">
+          <i data-lucide="send" style="width:16px;height:16px;"></i><span>부적합 통보 관리</span>
+        </a>
+      </div>
+
+      <!-- Company Internal 8D Sections (Hidden for Subcontractor Account) -->
+      <div id="internalCompanyNavSection">
+        <div class="menu-cat">사내 품질 관리</div>
+        <a class="nav-item" id="nav-internal-issues" onclick="switchNav('internal-issues', this)">
+          <i data-lucide="clipboard-check" style="width:16px;height:16px;"></i><span>내부 Issue·부적합 관리</span>
+        </a>
+        <a class="nav-item" id="nav-internal-pcn" onclick="switchNav('internal-pcn', this)">
+          <i data-lucide="git-pull-request" style="width:16px;height:16px;"></i><span>내부 PCN 변경 관리</span>
+        </a>
+        <div class="menu-cat">고객 부적합 및 8D Case</div>
+        <a class="nav-item" onclick="switchNav('new-case', this)">
+          <i data-lucide="plus-circle" style="width: 16px; height: 16px; color: #38bdf8;"></i>
+          <span>STEP 01. 고객 부적합 접수</span>
+        </a>
+      <a class="nav-item" onclick="switchNav('intake-triage', this)">
+        <i data-lucide="clipboard-search" style="width: 16px; height: 16px; color: #f59e0b;"></i>
+        <span>STEP 02. 품질 검토 대기</span>
+        <span class="badge badge-warn" id="nav-intake-count" style="display:none;">0</span>
+      </a>
+      <a class="nav-item" onclick="switchNav('cases-list', this)">
+        <i data-lucide="folder-kanban" style="width: 16px; height: 16px;"></i>
+        <span>진행 Case 관리 (Open Cases)</span>
+        <span class="badge badge-warn" id="nav-open-count">3</span>
+      </a>
+
+      <div class="menu-cat" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>8D Problem Solving Flow</span>
+        <span style="font-size:0.6rem; color:#60a5fa; text-transform:none; font-weight:600;">Sequential Gated</span>
+      </div>
+      <a class="nav-item" onclick="switchStage('overview')">
+        <i data-lucide="file-spreadsheet" style="width: 16px; height: 16px; color: #60a5fa;"></i>
+        <span>Case Overview (통합 개요)</span>
+      </a>
+
+      <div class="nav-stage-flow">
+        <!-- D1 -->
+        <a class="nav-item nav-stage-item" onclick="switchStage('D1')" data-stage="D1" title="D1. Cross-Functional Team (CFT 편성 및 역할·책임)">
+          <div class="nav-stage-icon">
+            <i data-lucide="users" style="width: 14px; height: 14px; color:#60a5fa;"></i>
+          </div>
+          <div class="nav-stage-text">
+            <div class="nav-stage-main">D1. Cross-Functional Team</div>
+            <div class="nav-stage-sub">CFT / 역할·책임 구성</div>
+          </div>
+          <div class="nav-stage-status" id="stageIndicator-D1"></div>
+        </a>
+
+        <!-- D2 -->
+        <a class="nav-item nav-stage-item" onclick="switchStage('D2')" data-stage="D2" title="D2. Problem Description (5W2H 현상 규명)">
+          <div class="nav-stage-icon">
+            <i data-lucide="alert-octagon" style="width: 14px; height: 14px; color:#f87171;"></i>
+          </div>
+          <div class="nav-stage-text">
+            <div class="nav-stage-main">D2. Problem Description</div>
+            <div class="nav-stage-sub">5W2H / 현상 규명</div>
+          </div>
+          <div class="nav-stage-status" id="stageIndicator-D2"></div>
+        </a>
+
+        <!-- D3 -->
+        <a class="nav-item nav-stage-item" onclick="switchStage('D3')" data-stage="D3" title="D3. Interim Containment Action (ICA / 긴급 유출방지)">
+          <div class="nav-stage-icon">
+            <i data-lucide="shield-alert" style="width: 14px; height: 14px; color:#f59e0b;"></i>
+          </div>
+          <div class="nav-stage-text">
+            <div class="nav-stage-main">D3. Interim Containment Action</div>
+            <div class="nav-stage-sub">ICA / 긴급 유출방지</div>
+          </div>
+          <div class="nav-stage-status" id="stageIndicator-D3"></div>
+        </a>
+
+        <!-- D4 -->
+        <a class="nav-item nav-stage-item" onclick="switchStage('D4')" data-stage="D4" title="D4. Root Cause & Escape Cause (발생/유출 원인 규명)">
+          <div class="nav-stage-icon">
+            <i data-lucide="microscope" style="width: 14px; height: 14px; color:#c084fc;"></i>
+          </div>
+          <div class="nav-stage-text">
+            <div class="nav-stage-main">D4. Root Cause & Escape Cause</div>
+            <div class="nav-stage-sub">5-Why & FA</div>
+          </div>
+          <div class="nav-stage-status" id="stageIndicator-D4"></div>
+        </a>
+
+        <!-- D5 -->
+        <a class="nav-item nav-stage-item" onclick="switchStage('D5')" data-stage="D5" title="D5. Permanent Corrective Action (PCA 영구 시정조치)">
+          <div class="nav-stage-icon">
+            <i data-lucide="wrench" style="width: 14px; height: 14px; color:#38bdf8;"></i>
+          </div>
+          <div class="nav-stage-text">
+            <div class="nav-stage-main">D5. Permanent Corrective Action</div>
+            <div class="nav-stage-sub">PCA</div>
+          </div>
+          <div class="nav-stage-status" id="stageIndicator-D5"></div>
+        </a>
+
+        <!-- D6 -->
+        <a class="nav-item nav-stage-item" onclick="switchStage('D6')" data-stage="D6" title="D6. Implementation & Validation (대책 적용 및 효과 검증)">
+          <div class="nav-stage-icon">
+            <i data-lucide="check-check" style="width: 14px; height: 14px; color:#34d399;"></i>
+          </div>
+          <div class="nav-stage-text">
+            <div class="nav-stage-main">D6. Implementation & Validation</div>
+            <div class="nav-stage-sub">효과 검증</div>
+          </div>
+          <div class="nav-stage-status" id="stageIndicator-D6"></div>
+        </a>
+
+        <!-- D7 -->
+        <a class="nav-item nav-stage-item" onclick="switchStage('D7')" data-stage="D7" title="D7. Prevent Recurrence (재발방지 및 수평전개)">
+          <div class="nav-stage-icon">
+            <i data-lucide="repeat" style="width: 14px; height: 14px; color:#2dd4bf;"></i>
+          </div>
+          <div class="nav-stage-text">
+            <div class="nav-stage-main">D7. Prevent Recurrence</div>
+            <div class="nav-stage-sub">재발방지 / 수평전개</div>
+          </div>
+          <div class="nav-stage-status" id="stageIndicator-D7"></div>
+        </a>
+
+        <!-- D8 -->
+        <a class="nav-item nav-stage-item" onclick="switchStage('D8')" data-stage="D8" title="D8. Closure & Recognition (최종 종결 및 팀 인정)">
+          <div class="nav-stage-icon">
+            <i data-lucide="award" style="width: 14px; height: 14px; color:#fbbf24;"></i>
+          </div>
+          <div class="nav-stage-text">
+            <div class="nav-stage-main">D8. Closure & Recognition</div>
+            <div class="nav-stage-sub">최종 종결</div>
+          </div>
+          <div class="nav-stage-status" id="stageIndicator-D8"></div>
+        </a>
+      </div>
+
+      <div class="menu-cat">Evidence & Actions</div>
+      <a class="nav-item" onclick="switchNav('evidence-hub', this)">
+        <i data-lucide="file-check-2" style="width: 16px; height: 16px; color: #a855f7;"></i>
+        <span>Evidence 매트릭스 (증거 관리)</span>
+      </a>
+      <a class="nav-item" onclick="switchNav('actions-hub', this)">
+        <i data-lucide="list-todo" style="width: 16px; height: 16px; color: #fbbf24;"></i>
+        <span>통합 Action 트래커</span>
+      </a>
+
+      <div class="menu-cat">Official 8D Reports</div>
+      <a class="nav-item" onclick="switchNav('reports-hub', this)">
+        <i data-lucide="printer" style="width: 16px; height: 16px; color: #34d399;"></i>
+        <span>공식 8D 리포트 출력 센터</span>
+      </a>
+      </div> <!-- /internalCompanyNavSection -->
+    </div> <!-- /sidebarMenuView -->
+
+    <!-- TAB 2: RAMOS ORG TREE -->
+    <div class="sidebar-content" id="sidebarOrgView" style="display: none;">
+      <div class="org-search-box">
+        <input type="text" id="orgSearchInput" class="form-control" placeholder="🔍 부서, 성명, 담당업무 검색..." oninput="filterOrgTree(this.value)" style="font-size:0.75rem; padding:6px 10px;">
+      </div>
+      <div style="font-size:0.68rem; color:var(--text-muted); margin-bottom:8px; display:flex; justify-content:space-between;">
+        <span>RAmos 전사 품질·개발·제조 조직도</span>
+        <span style="color:#60a5fa;">총 62명 (RAmos 전사)</span>
+      </div>
+      <div id="orgTreeContainer">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- User / System Status Footer (김성중 S.Pro) -->
+    <div style="padding: 12px 14px; border-top: 1px solid var(--border); background: var(--bg-card-subtle); display: flex; align-items: center; gap: 10px;">
+      <div class="sidebar-user-avatar" style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #7c3aed); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.78rem; color: #fff; box-shadow: 0 0 10px rgba(59, 130, 246, 0.4); flex-shrink: 0;">
+        SJ
+      </div>
+      <div style="flex: 1; overflow: hidden;">
+        <div style="font-size: 0.82rem; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; color: var(--text-primary);">
+          김성중 S.Pro <span style="font-size: 0.68rem; color: #2563eb; font-weight:600;">(품질혁신팀)</span>
+        </div>
+        <div style="font-size: 0.68rem; color: #34d399; font-weight: 600; display:flex; align-items:center; gap:4px;">
+          <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#10b981;"></span>
+          Online
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ========================================================================= -->
+  <!-- MAIN WORKSPACE AREA                                                       -->
+  <!-- ========================================================================= -->
+  <main class="main-area">
+    <!-- Top Sticky Header with User Persona Switcher & Live Notification Bell -->
+    <header class="top-header">
+      <div class="header-case-zone">
+        <div class="case-selector">
+          <i data-lucide="layers"></i>
+          <span class="header-control-label">CASE</span>
+          <select id="activeCaseSelect" onchange="onCaseChange(this.value)">
+            <!-- Populated via JS -->
+          </select>
+        </div>
+        <div id="headerStageBadge" class="header-stage-state">
+          <i data-lucide="activity" style="width: 12px; height: 12px;"></i>
+          <span>대기</span>
+        </div>
+        <!-- Customer 8D SLA Watchdog Countdown Chip -->
+        <div id="headerSlaWatchdog" class="header-sla-chip sla-badge-ontrack" style="display:none;" title="8D 대응 규격 24h/14D/30D SLA 타이머"></div>
+        <!-- Hidden AI engine badge for backwards compatibility -->
+        <div id="headerAIEngineBadge" style="display:none;"></div>
+      </div>
+
+      <div class="header-actions">
+        <!-- User Switcher Dropdown (Persona Selector) -->
+        <div class="user-switcher-shell" title="사용자 계정 전환">
+          <i data-lucide="user" style="width:13px; height:13px; color:#60a5fa; flex:0 0 13px;"></i>
+          <select id="currentUserSelect" class="user-selector-select" onchange="onUserSwitch(this.value)">
+            <!-- Populated via JS -->
+          </select>
+        </div>
+
+        <!-- Notification Bell with Live Badge -->
+        <button class="notif-bell-btn" onclick="openNotificationModal()" title="내 할 일 / 긴급 Action 알림">
+          <i data-lucide="bell"></i>
+          <span class="notif-badge-count" id="headerNotifBadge">0</span>
+        </button>
+
+        <button class="header-action-button header-internal-btn" id="headerNav-sla" onclick="openSlaTimelineModal()" title="고객사 8D 대응 SLA 타임라인 및 D3 지연 소명 관리">
+          <i data-lucide="clock"></i>
+          <span>SLA 관제</span>
+        </button>
+        <button class="header-action-button header-internal-btn" id="headerNav-mission-control" onclick="switchNav('mission-control')" title="3-Sprint AI 자율 8D 미션 컨트롤 관제탑">
+          <i data-lucide="bot"></i>
+          <span>자율 8D AI</span>
+        </button>
+        <button class="header-action-button header-internal-btn" id="headerNav-ai-assistant" onclick="openAIAssistantModal()" title="AI 품질 검토">
+          <i data-lucide="sparkles"></i>
+          <span>AI 검토</span>
+        </button>
+        <button class="header-action-button header-internal-btn" id="headerNav-reports-hub" onclick="switchNav('reports-hub')" title="8D 리포트 및 결재">
+          <i data-lucide="file-text"></i>
+          <span>8D 리포트</span>
+        </button>
+        <button class="header-action-button header-internal-btn" id="headerNav-supplier-portal" onclick="switchNav('supplier-portal')" title="외주사 품질 및 4M PCN 관제">
+          <i data-lucide="factory"></i>
+          <span>외주 PCN</span>
+        </button>
+        <button class="header-action-button header-internal-btn" id="headerNav-reset" onclick="location.reload()" title="현재 화면 새로고침">
+          <i data-lucide="rotate-ccw"></i>
+          <span>새로고침</span>
+        </button>
+        <button class="header-action-button icon-only logout" onclick="handleLogout()" title="로그아웃" aria-label="로그아웃">
+          <i data-lucide="log-out"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Dynamic Main Content View -->
+    <div class="content-body" id="mainContentContainer">
+      <!-- Dynamic Views Rendered by JS -->
+    </div>
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODALS & OVERLAYS                                                         -->
+  <!-- ========================================================================= -->
+  <div id="globalModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div id="modalContainer" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); width: 700px; max-width: 90vw; max-height: 90vh; overflow-y: auto; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+      <!-- Dynamic Modal Content -->
+    </div>
+  </div>
+
+  <!-- Modular JavaScript Architecture (Cache-Busting for Instant Live Updates) -->
+  <script src="js/clean_start_migration.js?v=20261002_clean_start_v2"></script>
+  <script src="js/data.js?v=20261002_clean_start_v2"></script>
+  <script src="js/org_tree.js?v=20261002_evidence_v1"></script>
+  <script src="js/ai_engine.js?v=20260916_v2"></script>
+  <script src="js/server_api.js?v=20261002_internal_v2"></script>
+  <script src="js/ui_components.js?v=20261002_uniform_v2"></script>
+  <script src="js/views/agent_operations.js?v=20261002_uniform_v2"></script>
+  <script src="js/views/similar_cases.js?v=20260916_v1"></script>
+  <script src="js/intake_documents.js?v=20260909_v49"></script>
+  <script src="js/case_evidence.js?v=20261002_evidence_v1"></script>
+  <script src="js/approval.js?v=20261002_evidence_v1"></script>
+  <script src="js/views/dashboard.js?v=20261002_uniform_v2"></script>
+  <script src="js/views/intake.js?v=20261002_triage_result_v3"></script>
+  <script src="js/semiconductor_evidence_svg.js?v=20260909_v52"></script>
+  <script src="js/views/workspace.js?v=20261002_d2_korean_v1"></script>
+  <script src="js/views/evidence.js?v=20261002_uniform_v2"></script>
+  <script src="js/views/actions.js?v=20261002_uniform_v2"></script>
+  <script src="js/views/reports.js?v=20261002_uniform_v2"></script>
+  <script src="js/views/d4_evidence.js?v=20260909_v49"></script>
+  <script src="js/views/stage_preview.js?v=20261002_clean_start_v2"></script>
+  <script src="js/late_stages.js?v=20260909_v49"></script>
+  <script src="js/views/internal_ai_gatekeeper.js?v=20260922_v1"></script>
+  <script src="js/supplier_data.js?v=20261002_clean_start_v2"></script>
+  <script src="js/views/supplier_ai_audit.js?v=20260922_v1"></script>
+  <script src="js/views/doc_viewer.js?v=20261002_clean_start_v2"></script>
+  <script src="js/views/supplier_portal.js?v=20261002_internal_v2"></script>
+  <script src="js/views/supplier_bridge.js?v=20260922_v1"></script>
+  <script src="js/views/sla_coq_engine.js?v=20261002_clean_start_v2"></script>
+  <script src="js/views/autonomous_8d_agent.js?v=20261002_uniform_v2"></script>
+  <script src="js/views/supplier_notices.js?v=20261002_supplier_notices_v2"></script>
+  <script src="js/views/internal_quality.js?v=20261002_internal_v2"></script>
+  <script src="js/ui_readability.js?v=20261002_uniform_v2"></script>
+  <script src="js/app.js?v=20261002_supplier_notices_v1"></script>
+</body>
+</html>

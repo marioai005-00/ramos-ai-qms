@@ -1,0 +1,582 @@
+[
+  {
+    "sector": "COO 직속",
+    "division": "COO 직속",
+    "dept": "COO 직속",
+    "fullDept": "COO 직속",
+    "members": [
+      {
+        "name": "윤석재",
+        "position": "COO_부사장",
+        "email": "sjyun@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "COO 직속",
+    "division": "제조기획센터",
+    "dept": "IT_보안팀",
+    "fullDept": "COO 직속 > IT_보안팀",
+    "members": [
+      {
+        "name": "이우진",
+        "position": "팀장_P.Pro",
+        "email": "lwj@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "김기서",
+        "position": "Pro",
+        "email": "kskim@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "김도현",
+        "position": "Pro",
+        "email": "dohyun20.kim@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "COO 직속",
+    "division": "제조기획센터",
+    "dept": "계획운영그룹",
+    "fullDept": "COO 직속 > 계획운영그룹",
+    "members": [
+      {
+        "name": "공아름",
+        "position": "그룹장_P.Pro",
+        "email": "loveskr@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "강순자",
+        "position": "Senior Pro",
+        "email": "daks3539@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "김현수_제조",
+        "position": "Pro",
+        "email": "kimhs@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "COO 직속",
+    "division": "제조기획센터",
+    "dept": "외주운영그룹",
+    "fullDept": "COO 직속 > 외주운영그룹",
+    "members": [
+      {
+        "name": "김혜원",
+        "position": "Pro",
+        "email": "hyewon@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "오승현",
+        "position": "Pro",
+        "email": "shoh@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "COO 직속",
+    "division": "제조기획센터",
+    "dept": "자원운영그룹",
+    "fullDept": "COO 직속 > 자원운영그룹",
+    "members": [
+      {
+        "name": "조철민",
+        "position": "그룹장_P.Pro",
+        "email": "nrjcm@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "우정우",
+        "position": "Pro",
+        "email": "jwwoo@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "COO 직속",
+    "division": "제조기획센터",
+    "dept": "제조기획센터",
+    "fullDept": "COO 직속 > 제조기획센터",
+    "members": [
+      {
+        "name": "이은산",
+        "position": "센터장_상무",
+        "email": "eunsan.lee@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "대표이사",
+    "division": "대표이사",
+    "dept": "대표이사",
+    "fullDept": "대표이사",
+    "members": [
+      {
+        "name": "조장호",
+        "position": "대표이사",
+        "email": "jh.choue66@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "알앤디부문",
+    "division": "DRAM 개발실",
+    "dept": "DRAM 개발1팀",
+    "fullDept": "알앤디부문 > DRAM 개발1팀",
+    "members": [
+      {
+        "name": "박재훈",
+        "position": "Principal Pro",
+        "email": "hope@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "배진성",
+        "position": "Principal Pro",
+        "email": "sean@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "알앤디부문",
+    "division": "DRAM 개발실",
+    "dept": "DRAM 개발2팀",
+    "fullDept": "알앤디부문 > DRAM 개발2팀",
+    "members": [
+      {
+        "name": "신덕용",
+        "position": "팀장_P.Pro",
+        "email": "satiou@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "정선혁",
+        "position": "Pro",
+        "email": "jsh@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "알앤디부문",
+    "division": "DRAM 개발실",
+    "dept": "DRAM 개발실",
+    "fullDept": "알앤디부문 > DRAM 개발실",
+    "members": [
+      {
+        "name": "박철홍",
+        "position": "실장_상무",
+        "email": "chpark@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "이민호",
+        "position": "담당_팀장_이사",
+        "email": "aden@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "알앤디부문",
+    "division": "Flash개발실",
+    "dept": "Flash 개발1팀",
+    "fullDept": "알앤디부문 > Flash 개발1팀",
+    "members": [
+      {
+        "name": "정현석",
+        "position": "팀장_S.Pro",
+        "email": "hsjeong@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "김영태",
+        "position": "Pro",
+        "email": "ytkim@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "심병진",
+        "position": "Pro",
+        "email": "bjsim@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "양태욱",
+        "position": "Pro",
+        "email": "tuyang@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "알앤디부문",
+    "division": "Flash개발실",
+    "dept": "Flash 개발2팀",
+    "fullDept": "알앤디부문 > Flash 개발2팀",
+    "members": [
+      {
+        "name": "박재환",
+        "position": "팀장_S.Pro",
+        "email": "jhpark@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "정유석",
+        "position": "Senior Pro",
+        "email": "jys@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "김상우",
+        "position": "Pro",
+        "email": "sangwoo2352@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "김태규",
+        "position": "Pro",
+        "email": "ktgstar2007@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "조성근",
+        "position": "Pro",
+        "email": "sg.cho@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "알앤디부문",
+    "division": "Flash개발실",
+    "dept": "Flash 개발3팀",
+    "fullDept": "알앤디부문 > Flash 개발3팀",
+    "members": [
+      {
+        "name": "이성우",
+        "position": "팀장_P.Pro",
+        "email": "fog1007@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "김유진",
+        "position": "Pro",
+        "email": "yjkim@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "홍종혁",
+        "position": "Pro",
+        "email": "jhhong@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "알앤디부문",
+    "division": "Flash개발실",
+    "dept": "Flash 개발실",
+    "fullDept": "알앤디부문 > Flash 개발실",
+    "members": [
+      {
+        "name": "김현수",
+        "position": "실장_상무",
+        "email": "hskim@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "알앤디부문",
+    "division": "알앤디부문",
+    "dept": "알앤디부문",
+    "fullDept": "알앤디부문",
+    "members": [
+      {
+        "name": "박정훈",
+        "position": "부문장_전무",
+        "email": "gh8229@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "전략 마케팅실",
+    "division": "영업부문",
+    "dept": "영업부문",
+    "fullDept": "전략 마케팅실 > 영업부문",
+    "members": [
+      {
+        "name": "Robin_Myung_명노광",
+        "position": "부문장_전무",
+        "email": "rkmyung@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "전략 마케팅실",
+    "division": "영업부문",
+    "dept": "영업팀",
+    "fullDept": "전략 마케팅실 > 영업팀",
+    "members": [
+      {
+        "name": "Sahong_Kim_김사홍",
+        "position": "팀장_P.Pro",
+        "email": "shk@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "Aria_김애정",
+        "position": "Pro",
+        "email": "anasta@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "Jinyi Ahn_안진의",
+        "position": "Pro",
+        "email": "jinyi711@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "Jun Lee_이학준",
+        "position": "Pro",
+        "email": "junlee@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "Martin Lee_이지훈",
+        "position": "Pro",
+        "email": "homebot@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "Roen Kim_김려은",
+        "position": "Pro",
+        "email": "roenkim@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "Selly Park_박소진",
+        "position": "Pro",
+        "email": "sjpark@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "빈철우_Benjamin",
+        "position": "Pro",
+        "email": "cwbeen@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "전략 마케팅실",
+    "division": "전략 마케팅실",
+    "dept": "전략 마케팅실",
+    "fullDept": "전략 마케팅실",
+    "members": [
+      {
+        "name": "손동우",
+        "position": "실장_부사장",
+        "email": "bigsohn@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "전략 마케팅실",
+    "division": "전략 마케팅실",
+    "dept": "전략소싱팀",
+    "fullDept": "전략 마케팅실 > 전략소싱팀",
+    "members": [
+      {
+        "name": "John_Woo_우준수",
+        "position": "팀장_이사",
+        "email": "johnwoo@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "강병주",
+        "position": "Pro",
+        "email": "kbj8420@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "남서현",
+        "position": "Pro",
+        "email": "shnam1228@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "이하영",
+        "position": "Pro",
+        "email": "lhyduddlgk@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "전략 마케팅실",
+    "division": "전략 마케팅실",
+    "dept": "품질혁신팀",
+    "fullDept": "전략 마케팅실 > 품질혁신팀",
+    "members": [
+      {
+        "name": "황승안",
+        "position": "팀장_상무",
+        "email": "sahwang@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "김성중",
+        "position": "Senior Pro",
+        "email": "sjkim@ramostek.com",
+        "isMe": true
+      },
+      {
+        "name": "이봉건",
+        "position": "Pro",
+        "email": "special2947@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "전략경영부문",
+    "division": "전략경영부문",
+    "dept": "인프라혁신팀",
+    "fullDept": "전략경영부문 > 인프라혁신팀",
+    "members": [
+      {
+        "name": "이상주",
+        "position": "팀장_P.Pro",
+        "email": "sjlee@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "탁현준",
+        "position": "Pro",
+        "email": "thj@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "전략경영부문",
+    "division": "전략경영부문",
+    "dept": "전략1팀",
+    "fullDept": "전략경영부문 > 전략1팀",
+    "members": [
+      {
+        "name": "박상연",
+        "position": "Senior Pro",
+        "email": "parksy@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "고현우",
+        "position": "Pro",
+        "email": "hwko@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "박중민",
+        "position": "Pro",
+        "email": "jungmin16@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "전략경영부문",
+    "division": "전략경영부문",
+    "dept": "전략2팀",
+    "fullDept": "전략경영부문 > 전략2팀",
+    "members": [
+      {
+        "name": "고진규",
+        "position": "Pro",
+        "email": "wlsrb9010@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "김아영",
+        "position": "Pro",
+        "email": "kay153@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "김혜성",
+        "position": "Pro",
+        "email": "hyeskim@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "전략경영부문",
+    "division": "전략경영부문",
+    "dept": "전략경영부문",
+    "fullDept": "전략경영부문",
+    "members": [
+      {
+        "name": "이제현",
+        "position": "부문장_전무",
+        "email": "jaylee@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "전략경영부문",
+    "division": "전략경영부문",
+    "dept": "전략1팀/2팀",
+    "fullDept": "전략경영부문 > 전략1팀/2팀",
+    "members": [
+      {
+        "name": "이용희",
+        "position": "담당_팀장_이사",
+        "email": "iscra74@ramostek.com",
+        "isMe": false
+      }
+    ]
+  },
+  {
+    "sector": "전략경영부문",
+    "division": "전략경영부문",
+    "dept": "피플그룹",
+    "fullDept": "전략경영부문 > 피플그룹",
+    "members": [
+      {
+        "name": "고미영",
+        "position": "그룹장_P.Pro",
+        "email": "turf2313@ramostek.com",
+        "isMe": false
+      },
+      {
+        "name": "윤선혜",
+        "position": "Senior Pro",
+        "email": "shyun@ramostek.com",
+        "isMe": false
+      }
+    ]
+  }
+]
