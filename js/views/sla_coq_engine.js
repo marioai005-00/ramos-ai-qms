@@ -198,21 +198,7 @@ function startSlaWatchdogTimer() {
   _slaTimerInterval = setInterval(updateHeaderSlaWidget, 1000);
 }
 
-function formatKRW(val) {
-  return '₩' + Number(val).toLocaleString('ko-KR');
-}
 
-function formatKRWShort(val) {
-  if (val >= 100000000) {
-    const eok = (val / 100000000).toFixed(2);
-    return `₩${eok}억 원`;
-  }
-  if (val >= 10000) {
-    const man = Math.round(val / 10000).toLocaleString('ko-KR');
-    return `₩${man}만 원`;
-  }
-  return '₩' + Number(val).toLocaleString('ko-KR');
-}
 
 /**
  * =========================================================================
@@ -365,14 +351,6 @@ function openSlaTimelineModal(caseId) {
   if (window.lucide) lucide.createIcons();
 }
 
-/**
- * =========================================================================
- * 8D OFFICIAL REPORT CoQ & FINANCIAL TABLE FORMATTER
- * =========================================================================
- */
-function renderReportCoQFinancialTable(c) {
-  return '';
-}
 
 /**
  * =========================================================================

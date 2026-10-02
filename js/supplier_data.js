@@ -128,12 +128,6 @@ async function downloadSupplierTicketFile(ticketId, fileId) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// UI audit scripts render the views from in-memory records; nothing is sent to or stored on the server.
-function setSupplierTicketFixture(records) {
-  supplierTicketActor();
-  setSupplierRecords(records);
-  supplierTicketStore.loaded = true;
-}
 
 // Tickets saved by earlier versions stay in this browser only. They are never deleted or uploaded automatically.
 function legacyBrowserSupplierRecords() {
@@ -168,7 +162,6 @@ if (typeof window !== 'undefined') {
   window.loadSupplierRecords = loadSupplierRecords;
   window.getSupplierTicketRaw = getSupplierTicketRaw;
   window.refreshSupplierRecords = refreshSupplierRecords;
-  window.setSupplierTicketFixture = setSupplierTicketFixture;
   window.createSupplierTicket = createSupplierTicket;
   window.reviewSupplierTicket = reviewSupplierTicket;
   window.bindSupplierTicketTo8DCase = bindSupplierTicketTo8DCase;

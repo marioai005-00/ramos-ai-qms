@@ -128,4 +128,3 @@ async function previewCaseEvidence(index) {
     document.getElementById('globalModal').style.display='flex';
   } catch(error) { setCaseEvidenceNotice(c,`원본 열람 실패: ${error.message}`); }
 }
-function uploadEvidencePrompt() { document.getElementById('caseEvidenceAttachButton')?.click(); }

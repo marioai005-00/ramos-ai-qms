@@ -866,14 +866,6 @@
     let CURRENT_USER = PRESET_USERS[0]; // Default: 김성중 S.Pro
     if (typeof window !== 'undefined') window.CURRENT_USER = CURRENT_USER;
 
-    function setCurrentUser(userName) {
-      const found = PRESET_USERS.find(u => u.name === userName || u.username === userName || u.email === userName);
-      if (found) {
-        CURRENT_USER = found;
-        if (typeof window !== 'undefined') window.CURRENT_USER = found;
-        localStorage.setItem('RAMOS_CURRENT_USER', found.name);
-      }
-    }
 
     function loadCurrentUser() {
       const saved = localStorage.getItem('RAMOS_CURRENT_USER');
@@ -921,22 +913,6 @@
 
     const ALL_USER_ACCOUNTS = getAllUserAccounts();
 
-    function authenticateUser(username, password) {
-      const cleanUser = String(username || '').trim().toLowerCase();
-      const cleanPassword = String(password || '').trim();
-      if (!cleanUser || cleanPassword !== '1') return null;
-
-      if (['supplier', '외주', '외주사'].includes(cleanUser)) {
-        const sup = PRESET_USERS.find(u => u.username === 'thkwon');
-        if (sup) return { ...sup, password: '1' };
-      }
-
-      return ALL_USER_ACCOUNTS.find(account =>
-        account.username.toLowerCase() === cleanUser ||
-        account.email.toLowerCase() === cleanUser ||
-        account.name.toLowerCase() === cleanUser
-      ) || null;
-    }
 
     function hasMasterAuthority(user = CURRENT_USER) {
       return Boolean(user?.isMaster || user?.email === 'sjkim@ramostek.com');
