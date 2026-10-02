@@ -23,7 +23,8 @@ function approvalSnapshot(c, endStage) {
 }
 function hasCurrentStageApproval(c, stage) {
   const sign=c.signOffHistory?.[stage];
-  if(sign?.snapshot) return sign.status==='Approved' && (stage==='D1' ? c.cftRecommendation?.humanConfirmed===true&&c.cftRaci?.acknowledged===true : c[stage.toLowerCase()]?.approval?.status==='Approved'&&c[stage.toLowerCase()]?.approval?.humanConfirmed===true) && JSON.stringify(sign.snapshot)===JSON.stringify(approvalSnapshot(c,stage));
+  // A signed stage counts only when its champion approval carries the central server event.
+  if(sign?.snapshot) return sign.status==='Approved' && Number.isInteger(sign.champion?.serverEventId) && (stage==='D1' ? c.cftRecommendation?.humanConfirmed===true&&c.cftRaci?.acknowledged===true : c[stage.toLowerCase()]?.approval?.status==='Approved'&&c[stage.toLowerCase()]?.approval?.humanConfirmed===true) && JSON.stringify(sign.snapshot)===JSON.stringify(approvalSnapshot(c,stage));
   if(c.approvalReviewFrom && QUALITY_STAGES.indexOf(stage)>=QUALITY_STAGES.indexOf(c.approvalReviewFrom)) return false;
   // Retain explicitly stored legacy approval for navigation until its content changes.
   if(stage==='D1') return isCFTAssignmentComplete(c)&&c.cftRecommendation?.humanConfirmed===true&&c.cftRaci?.acknowledged===true&&sign?.status==='Approved';

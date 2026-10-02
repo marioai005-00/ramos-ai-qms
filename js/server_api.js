@@ -166,6 +166,10 @@
             state.conflictShown = true;
             alert('다른 사용자가 중앙 데이터를 먼저 저장했습니다. 현재 화면의 변경은 로컬에 보존되었지만 중앙 저장은 중단되었습니다. 새로고침 후 다시 확인해 주세요.');
           }
+        } else if (error.code === 'APPROVAL_NOT_RECORDED') {
+          // Retrying cannot succeed: the state claims an approval the server never recorded.
+          state.pendingState = null;
+          alert(`${error.message}\n새로고침하여 중앙 데이터를 다시 불러와 주세요.`);
         } else {
           state.pendingState = snapshot;
           break;

@@ -7,7 +7,7 @@ module.exports=async function({call,send,evaluate,inspect,delay,root,out,label,e
  fs.mkdirSync(path.join(out,label),{recursive:true});
  await checked("!!document.querySelector('#d2QualityForm #caseEvidenceAttachButton')",'Visible direct D2 upload');
  await checked("(async()=>{const ok=await verifyD2Evidence(getActiveCase());return !ok&&document.getElementById('caseEvidenceStatus').innerText.includes('파일 첨부');})()",'Empty Evidence blocks with direct upload guidance');
- const originalPath=path.join(root,'output/imagegen/20261002_emmc_email/emmc_nonconformance_email_test.png');
+ const originalPath=path.join(root,'tests/fixtures/emmc_nonconformance_email_test.png');
  const originalBytes=fs.readFileSync(originalPath),hash=crypto.createHash('sha256').update(originalBytes).digest('hex');
  await evaluate("document.querySelector('[name=problemWhat]').value='작성 중인 사실은 첨부 후에도 유지';document.getElementById('caseEvidenceType').value='Customer original'");
  await call('DOM.enable');const doc=await call('DOM.getDocument',{depth:-1});const picker=await call('DOM.querySelector',{nodeId:doc.root.nodeId,selector:'#caseEvidenceFileInput'});

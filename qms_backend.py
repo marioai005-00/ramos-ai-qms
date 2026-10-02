@@ -434,6 +434,8 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin):
                     code="REVISION_CONFLICT",
                     details={"expected": expected_revision, "current": current_revision},
                 )
+            previous_state = json.loads(previous["state_json"]) if previous else {}
+            self._verify_approval_claims(db, state, previous_state)
             new_revision = current_revision + 1
             now = utc_now()
             db.execute(
@@ -456,6 +458,92 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin):
                 details={"reason": reason[:500], "revision": new_revision},
             )
             return {"revision": new_revision, "updatedAt": now, "stateHash": after_hash}
+
+    _STAGE_KEYS = tuple(f"D{i}" for i in range(1, 9))
+    _GATE_ROLES = ("drafter", "leader", "champion", "quality_dispatcher")
+    _SIGN_STATUS_ROLES = {"Submitted": ("drafter",), "LeaderApproved": ("drafter", "leader"), "Approved": ("drafter", "leader", "champion")}
+
+    @classmethod
+    def _approval_claims(cls, state: dict[str, Any]) -> dict[tuple, dict[str, Any]]:
+        """Every approval a saved state asserts, keyed so an unchanged claim compares equal across saves."""
+        claims: dict[tuple, dict[str, Any]] = {}
+
+        def as_dict(value: Any) -> dict[str, Any]:
+            return value if isinstance(value, dict) else {}
+
+        def add(case_id: str, scope_type: str, scope_key: str, role: str, signer: Any, snapshot: Any, label: str) -> None:
+            event_id = as_dict(signer).get("serverEventId")
+            snapshot_hash = sha256_json(snapshot) if snapshot is not None else None
+            claims[(case_id, scope_type, scope_key, role, event_id, snapshot_hash)] = {
+                "caseId": case_id, "scopeType": scope_type, "scopeKey": scope_key, "role": role,
+                "eventId": event_id, "snapshotHash": snapshot_hash, "label": label,
+            }
+
+        for case in state.get("cases") or []:
+            if not isinstance(case, dict):
+                continue
+            case_id = str(case.get("id", ""))
+            history = as_dict(case.get("signOffHistory"))
+            for stage in cls._STAGE_KEYS:
+                sign = as_dict(history.get(stage))
+                roles = set(cls._SIGN_STATUS_ROLES.get(sign.get("status"), ()))
+                roles.update(role for role in ("drafter", "leader", "champion") if sign.get(role))
+                if as_dict(as_dict(case.get(stage.lower())).get("approval")).get("status") == "Approved":
+                    roles.add("champion")
+                for role in roles:
+                    add(case_id, "stage", stage, role, sign.get(role), sign.get("snapshot"), f"{stage} {role}")
+            gates = as_dict(case.get("gates"))
+            for gate_key in ("gate3D", "gate5D", "gate8D"):
+                gate = as_dict(gates.get(gate_key))
+                approvers = gate.get("approvers") if isinstance(gate.get("approvers"), list) else []
+                indexes = {i for i, approver in enumerate(approvers[:4]) if as_dict(approver).get("status") == "Approved"}
+                if gate.get("internalApproved"):
+                    indexes.update({0, 1, 2})
+                if gate.get("status") == "Approved" or gate.get("dispatchedByQuality"):
+                    indexes.add(3)
+                for i in indexes:
+                    signer = approvers[i] if i < len(approvers) else None
+                    add(case_id, "report_gate", gate_key, cls._GATE_ROLES[i], signer, gate.get("snapshot"), f"{gate_key} {cls._GATE_ROLES[i]}")
+            if case.get("status") == "Closed":
+                # Closure follows the D8 champion approval or the Final 8D dispatch record.
+                closing = as_dict(history.get("D8")).get("champion")
+                closing_gate = as_dict(gates.get("gate8D"))
+                approvers = closing_gate.get("approvers") if isinstance(closing_gate.get("approvers"), list) else []
+                if as_dict(closing).get("serverEventId"):
+                    add(case_id, "stage", "D8", "champion", closing, as_dict(history.get("D8")).get("snapshot"), "Case 종결")
+                else:
+                    add(case_id, "report_gate", "gate8D", "quality_dispatcher", approvers[3] if len(approvers) > 3 else None, closing_gate.get("snapshot"), "Case 종결")
+        return claims
+
+    def _verify_approval_claims(self, db: sqlite3.Connection, state: dict[str, Any], previous_state: dict[str, Any]) -> None:
+        """Reject approvals the browser asserts without a matching server approval event.
+
+        Claims already stored are left as they are, so records that predate this check keep loading and saving.
+        """
+        known = self._approval_claims(previous_state)
+        for key, claim in self._approval_claims(state).items():
+            if key in known:
+                continue
+            event = None
+            if isinstance(claim["eventId"], int) and not isinstance(claim["eventId"], bool):
+                event = db.execute("SELECT * FROM approval_events WHERE id = ?", (claim["eventId"],)).fetchone()
+            valid = (
+                event is not None
+                and event["case_id"] == claim["caseId"]
+                and event["scope_type"] == claim["scopeType"]
+                and event["scope_key"] == claim["scopeKey"]
+                and event["role_key"] == claim["role"]
+                and event["decision"] in {"APPROVED", "SUBMITTED"}
+                and event["snapshot_hash"] is not None
+                and event["snapshot_hash"] == claim["snapshotHash"]
+            )
+            if not valid:
+                raise QMSApiError(
+                    409,
+                    f"{claim['caseId']} {claim['label']} 결재가 중앙 결재 기록과 일치하지 않아 저장하지 않았습니다. 실제 결재자 계정으로 결재해 주세요.",
+                    code="APPROVAL_NOT_RECORDED",
+                    details={"caseId": claim["caseId"], "scopeType": claim["scopeType"], "scopeKey": claim["scopeKey"], "role": claim["role"]},
+                )
 
     def upload_case_evidence(self, identity: SessionIdentity, case_id: str, payload: dict) -> dict:
         self._require_role(identity, {"system_admin", "quality_reviewer", "case_facilitator", "stage_drafter", "stage_leader", "stage_champion", "customer_dispatcher"})

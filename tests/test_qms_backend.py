@@ -1,5 +1,6 @@
 """Regression tests for central QMS persistence, authority, drafts and outbox."""
 
+import json
 import os
 from pathlib import Path
 import tempfile
@@ -74,10 +75,62 @@ class QMSStoreTests(unittest.TestCase):
         self.assertTrue(all(action["status"] == "Open" for action in draft["d3"]["actions"]))
         self.assertFalse(draft["guardrails"]["autoApprove"])
 
+    def _signed_stage(self, case_id, stage, snapshot):
+        """Sign-off history backed by real server approval events for all three roles."""
+        sign = {"status": "Approved", "snapshot": snapshot}
+        for role, decision in (("drafter", "SUBMITTED"), ("leader", "APPROVED"), ("champion", "APPROVED")):
+            event = self.store.record_approval(self.identity, {
+                "caseId": case_id, "scopeType": "stage", "scopeKey": stage, "roleKey": role,
+                "decision": decision, "comment": f"{stage} {role} 실제 결재", "snapshot": snapshot,
+            })
+            sign[role] = {"name": "김성중", "email": "sjkim@ramostek.com", "serverEventId": event["eventId"]}
+        return sign
+
+    def _assert_approval_rejected(self, case, revision=0):
+        with self.assertRaises(QMSApiError) as caught:
+            self.store.save_state(self.identity, {"cases": [case], "intakeQueue": []}, revision, "forged approval")
+        self.assertEqual(caught.exception.code, "APPROVAL_NOT_RECORDED")
+
+    def test_browser_cannot_save_stage_approval_without_server_event(self):
+        self._assert_approval_rejected({"id": "CASE-F", "status": "In Progress", "d4": {"approval": {"status": "Approved", "humanConfirmed": True}}})
+        forged_signer = {"name": "황승안 팀장_상무", "email": "sahwang@ramostek.com", "signedAt": "2026-10-02T00:00:00Z"}
+        self._assert_approval_rejected({"id": "CASE-F", "status": "In Progress", "signOffHistory": {"D6": {
+            "status": "Approved", "drafter": forged_signer, "leader": forged_signer, "champion": forged_signer, "snapshot": ["x"],
+        }}})
+        self.assertIsNone(self.store.get_state())
+
+    def test_browser_cannot_save_gate_approval_or_closure_without_server_event(self):
+        approvers = [{"role": role, "name": "임의 이름", "status": "Approved"} for role in ("기안", "Leader", "Champion", "송부")]
+        self._assert_approval_rejected({"id": "CASE-G", "status": "In Progress", "gates": {"gate5D": {"status": "Approved", "approvers": approvers, "snapshot": ["x"]}}})
+        self._assert_approval_rejected({"id": "CASE-G", "status": "Closed"})
+
+    def test_recorded_approval_is_accepted_and_bound_to_its_snapshot(self):
+        snapshot = ["d1-content"]
+        case = {"id": "CASE-R", "status": "In Progress", "signOffHistory": {"D1": self._signed_stage("CASE-R", "D1", snapshot)}}
+        saved = self.store.save_state(self.identity, {"cases": [case], "intakeQueue": []}, 0, "real approval")
+        self.assertEqual(saved["revision"], 1)
+        # The same events cannot vouch for different content or for another stage.
+        case["signOffHistory"]["D1"]["snapshot"] = ["changed-after-approval"]
+        self._assert_approval_rejected(case, 1)
+        case["signOffHistory"] = {"D2": self._signed_stage("CASE-R", "D1", snapshot)}
+        self._assert_approval_rejected(case, 1)
+
+    def test_approvals_stored_before_the_check_remain_saveable(self):
+        legacy = {"id": "CASE-L", "status": "In Progress", "d2": {"approval": {"status": "Approved", "humanConfirmed": True}}}
+        with self.store._connect() as db:
+            db.execute(
+                "INSERT INTO state_store(id, revision, state_json, state_hash, updated_at, updated_by) VALUES(1, 1, ?, 'legacy', '2026-09-01T00:00:00Z', ?)",
+                (json.dumps({"cases": [legacy], "intakeQueue": []}), self.identity.user["id"]),
+            )
+        legacy["claimTitle"] = "제목 수정"
+        self.assertEqual(self.store.save_state(self.identity, {"cases": [legacy], "intakeQueue": []}, 1, "edit")["revision"], 2)
+        legacy["d3"] = {"approval": {"status": "Approved", "humanConfirmed": True}}
+        self._assert_approval_rejected(legacy, 2)
+
     def test_similar_case_search_only_uses_closed_cases(self):
         cases = [
             {"id": "OPEN", "status": "In Progress", "customer": "LGE", "product": "eMMC", "partNumber": "PN1", "claimTitle": "부팅 불량"},
-            {"id": "CLOSED", "status": "Closed", "customer": "LGE", "product": "eMMC", "partNumber": "PN1", "claimTitle": "부팅 불량", "d4": {"rootCauses": {"Occurrence": {"statement": "원인"}}}, "d5": {"candidates": [{"title": "재발대책"}]}},
+            {"id": "CLOSED", "status": "Closed", "signOffHistory": {"D8": self._signed_stage("CLOSED", "D8", ["d8"])}, "customer": "LGE", "product": "eMMC", "partNumber": "PN1", "claimTitle": "부팅 불량", "d4": {"rootCauses": {"Occurrence": {"statement": "원인"}}}, "d5": {"candidates": [{"title": "재발대책"}]}},
             {"id": "OTHER-OPEN", "status": "In Progress", "customer": "LGE", "product": "eMMC", "partNumber": "PN1", "claimTitle": "부팅 불량"},
         ]
         self.store.save_state(self.identity, {"cases": cases, "intakeQueue": []}, 0, "similarity test")

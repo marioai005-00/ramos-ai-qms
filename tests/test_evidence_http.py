@@ -28,8 +28,10 @@ class EvidenceHttpTests(unittest.TestCase):
         self.thread.start()
         self.origin = f"http://127.0.0.1:{self.server.server_port}"
         self.secure = self.login("sjkim")
-        status, _, _ = self.request("POST", "/__api__/qms/state", {"state": {"cases": [{"id": "CASE-TEST", "evidenceList": [], "signOffHistory": {"D1": {"status": "Approved", "drafter": {"name": "existing"}}, "D2": {"status": "Approved", "drafter": {"name": "existing"}}}, "d2": {"approval": {"status": "Approved", "humanConfirmed": True}}, "gates": {"gate3D": {"status": "Approved", "approvers": []}}}], "intakeQueue": []}, "expectedRevision": 0}, self.secure)
-        self.assertEqual(status, 200)
+        # Already-approved fixture is stored directly: the state API rejects approvals without server events.
+        state = {"cases": [{"id": "CASE-TEST", "evidenceList": [], "signOffHistory": {"D1": {"status": "Approved", "drafter": {"name": "existing"}}, "D2": {"status": "Approved", "drafter": {"name": "existing"}}}, "d2": {"approval": {"status": "Approved", "humanConfirmed": True}}, "gates": {"gate3D": {"status": "Approved", "approvers": []}}}], "intakeQueue": []}
+        with self.store._connect() as db:
+            db.execute("INSERT INTO state_store(id, revision, state_json, state_hash, updated_at, updated_by) VALUES(1, 1, ?, 'fixture', '2026-10-01T00:00:00Z', 1)", (json.dumps(state),))
 
     def tearDown(self):
         self.server.shutdown()

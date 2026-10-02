@@ -330,6 +330,9 @@ async function promptSignoffApproval(gateKey, forceMaster = false) {
     }
     alert(`${pending.name} 결재자 계정으로 다시 로그인해 주세요.`);
     return;
+  }
+  const comment=prompt(`[${pending.role}] ${assigned.name} 결재 의견:`);
+  if(!comment?.trim())return;
   const pendingIndex=gate.approvers.indexOf(pending);
   const roleKey=['drafter','leader','champion'][pendingIndex];
   let serverEvent;
@@ -343,9 +346,6 @@ async function promptSignoffApproval(gateKey, forceMaster = false) {
     alert(`중앙 결재를 기록하지 못했습니다. 화면 상태는 변경되지 않았습니다.\n${serverError.message}`);
     return;
   }
-  }
-  const comment=prompt(`[${pending.role}] ${assigned.name} 결재 의견:`);
-  if(!comment?.trim())return;
   gate.snapshot=snapshot;
   Object.assign(pending,{status:'Approved',email:assigned.email,date:new Date().toISOString(),comment:comment.trim(),serverEventId:serverEvent.eventId});
   gate.internalApproved=gate.approvers.slice(0,3).every(a=>a.status==='Approved');
@@ -442,21 +442,12 @@ async function dispatchReportToCustomer(gateKey) {
   saveAppData(); renderCurrentView();
   alert(`외부 송부 증빙과 발송 준비함 #${outbox.outboxId}을 기록했습니다. 이 시스템은 이메일을 발송하지 않았습니다.`);
 
-  // Autonomous 8D Agent Auto-Chaining Rail
-  if (window.ramosAgent && typeof window.ramosAgent.runSprint2 === 'function') {
-    if (gateKey === 'gate3D') {
-      window.ramosAgent.log('👤 [Gate 1 공식 송부 완료] D4 진입 및 Sprint 2(D4~D5) 자율 가동을 시작합니다.', 'success');
-      setTimeout(() => window.ramosAgent.runSprint2(c), 600);
-    } else if (gateKey === 'gate5D') {
-      window.ramosAgent.log('👤 [Gate 2 공식 송부 완료] D6 진입 및 Sprint 3(D6~D8) 자율 가동을 시작합니다.', 'success');
-      setTimeout(() => window.ramosAgent.runSprint3(c), 600);
-    } else if (gateKey === 'gate8D') {
-      c.status = 'Closed';
-      c.closedAt = now;
-      saveAppData();
-      window.ramosAgent.log('🎉 [Gate 3 최종 송부 완료] 8D 전 과정 영구 종결 완료!', 'success');
-      renderCurrentView();
-    }
+  // Dispatch evidence never generates later-stage content or approvals; D4~D8 stay with their owners.
+  if (gateKey === 'gate8D') {
+    c.status = 'Closed';
+    c.closedAt = now;
+    saveAppData();
+    renderCurrentView();
   }
 }
 
