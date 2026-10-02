@@ -6,42 +6,13 @@
 let _slaTimerInterval = null;
 
 /**
- * Customer SLA Profiles & Ruleset (LGE vs Hyundai Mobis vs Samsung)
+ * One SLA rule for every customer, confirmed by the user on 2026-10-02:
+ * 3D (containment) 24 hours, 5D (root cause and corrective action) 14 days, 8D (closure) 30 days.
  */
-const CUSTOMER_SLA_RULES = {
-  'LGE': {
-    name: 'LGE (LG전자 DTV/전장)',
-    d3Hours: 24,
-    d5Days: 14,
-    d8Days: 30,
-  },
-  'HYUNDAI_MOBIS': {
-    name: '현대모비스/현대차 전장부품',
-    d3Hours: 12, // Critical automotive standard
-    d5Days: 10,
-    d8Days: 30,
-  },
-  'SAMSUNG_SEC': {
-    name: '삼성전자 스마트가전/모바일',
-    d3Hours: 24,
-    d5Days: 14,
-    d8Days: 30,
-  },
-  'DEFAULT': {
-    name: '글로벌 AIAG-VDA 8D 표준',
-    d3Hours: 24,
-    d5Days: 14,
-    d8Days: 30,
-  }
-};
+const CUSTOMER_SLA_RULE = { name: '8D 표준 (3D 24시간 · 5D 14일 · 8D 30일)', d3Hours: 24, d5Days: 14, d8Days: 30 };
 
-function getCustomerSlaRule(c) {
-  if (!c || !c.customer) return CUSTOMER_SLA_RULES.DEFAULT;
-  const cust = c.customer.toUpperCase();
-  if (cust.includes('LG') || cust.includes('LGE')) return CUSTOMER_SLA_RULES.LGE;
-  if (cust.includes('현대') || cust.includes('MOBIS') || cust.includes('HYUNDAI')) return CUSTOMER_SLA_RULES.HYUNDAI_MOBIS;
-  if (cust.includes('삼성') || cust.includes('SEC') || cust.includes('SAMSUNG')) return CUSTOMER_SLA_RULES.SAMSUNG_SEC;
-  return CUSTOMER_SLA_RULES.DEFAULT;
+function getCustomerSlaRule() {
+  return CUSTOMER_SLA_RULE;
 }
 
 function calculateCaseSla(c) {

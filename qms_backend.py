@@ -804,11 +804,8 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
                 return None
 
         def rule_for(case: dict[str, Any]) -> tuple[float, float, float]:
-            customer = str(case.get("customer", "")).upper()
-            if "현대" in customer or "MOBIS" in customer or "HYUNDAI" in customer:
-                base = (12.0, 10.0, 30.0)
-            else:
-                base = (24.0, 14.0, 30.0)
+            # One rule for every customer (user decision 2026-10-02): 3D 24 hours, 5D 14 days, 8D 30 days.
+            base = (24.0, 14.0, 30.0)
             triage = case.get("triageApproval", {}).get("slaHours")
             try:
                 triage_hours = float(triage)
