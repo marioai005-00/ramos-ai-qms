@@ -48,7 +48,7 @@
     }
 
     if (!cachedStatus.available) {
-      return { success: false, fallback: true, error: 'Local AI dispatch server is offline. Using built-in heuristics.' };
+      return { success: false, fallback: true, error: '외부 AI 키(.env의 GEMINI_API_KEY 또는 GROQ_API_KEY)가 설정되지 않아 문서 내용을 읽지 못했습니다. 값을 직접 입력해 주세요.' };
     }
 
     try {
