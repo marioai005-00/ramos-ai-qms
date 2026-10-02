@@ -1,3 +1,14 @@
+## 최신 수정 — 2026-10-02 16_QMS_8D 이전 · 가짜 승인 차단 · 외주 접수 중앙 저장
+
+- 폴더: 작업 폴더가 `G:/내 드라이브/AI_Place/Work/16_QMS_8D`로 바뀌었다. `14_AI_8D Report`의 소스 169개 파일만 반입했고(바이트 일치 확인) output/backups/light_audit/패치 조각/.env/운영 DB는 가져오지 않았다. 14번은 수정하지 않았다. 16번은 새 git 저장소(main)이며 14번의 Case·접수·감사 기록은 없다.
+- 가짜 승인 제거: 송부 증빙 기록 후 runSprint2/3가 고정 원인·"3,000개 PASS" 시험·임직원 3명 명의 Approved 서명을 만들던 경로를 삭제했다(synthesizeD1~D8, signStageInternal, executeHumanSignOff, 레거시 데모 플래그 포함). 보완 요청은 기록만 하고 수량·조치를 지어내지 않는다. 결재 기록이 있는 Case는 초기화할 수 없다.
+- 서버 검사: save_state가 새로 나타난 단계·Gate·종결 승인마다 approval_events의 같은 Case·범위·역할·스냅샷 해시를 확인하고, 없으면 409 APPROVAL_NOT_RECORDED로 저장을 거부한다. 이미 저장된 승인은 재검사하지 않는다.
+- 결재 버그 수정: promptSignoffApproval의 recordApproval 호출이 return 뒤 블록에 있어 지정 결재자의 보고서 승인이 ReferenceError로 실패하던 것을 고쳤다.
+- 외주 PCN·Issue: supplier_tickets.py와 /__api__/qms/supplier-tickets로 중앙 저장한다. 외주 계정은 자기 업체 건만 조회·등록·보완 제출, 심의는 품질 검토 권한자만, 심의자는 로그인 계정으로 기록. 첨부는 원본 바이트와 SHA-256 보관. 8D 연결은 실제 존재하는 Case 참조만 남기고 Case 내용을 바꾸지 않는다. 기존 브라우저 저장 기록은 삭제·자동 이전하지 않고 JSON 내려받기만 제공한다.
+- 검증: 임시 DB에서 Python 74건 통과(반입 직후 60 + 승인 검사 4 + 정적 가드 2 + 외주 접수 HTTP 8), py_compile·node --check 통과. 실제 브라우저(임시 DB)에서 외주 등록→타 외주사 0건→사내 보완 요청→원본 다운로드 일치→외주 보완 제출 확인. tests/*.cjs 브라우저 감사와 다수 결재자 D1~D8 전 과정은 실행하지 않았다.
+- 남은 문제: test_supplier_portal_e2e.cjs는 예시 데이터 전제라 현재 구조와 맞지 않는다. supplier_bridge/supplier_ai_audit 화면은 특수문자가 엔티티로 보일 수 있다. 서버는 127.0.0.1 전용이라 다른 PC의 외주사 접속은 범위 밖이다. Google Drive 동기화 폴더에서 SQLite를 실행 중 동기화하면 충돌할 수 있다.
+- 자료: docs/APPROVAL_GUARD_AND_SUPPLIER_TICKETS_20261002.md, tests/test_supplier_tickets_http.py, tests/test_no_client_approval.py, tests/test_qms_backend.py.
+
 ## 최신 수정 — 2026-10-02 우리 회사 → 외주사 부적합 통보 관리
 
 - 목적/완료: 외주 품질 관리의 세 번째 ‘부적합 통보 관리’ 메뉴. 공식 외주사 선택/담당자 자동 표시, 사내 담당자·주관·제품/품번/Lot/Site·확인 현상·요청 사항·회신 기한·원본 첨부, 목록/검색/업체·상태 필터/기한 초과 표시/등록 내용 수정/상세/이력.

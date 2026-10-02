@@ -34,7 +34,7 @@ module.exports=async({call,evaluate,inspect,delay,out,label,errors})=>{
  await evaluate("newInternalQuality();document.querySelector('[name=title]').value='작성 중 PCN 초안';internalQualityCapture(document.getElementById('internalQualityForm'));switchNav('internal-issues');switchNav('internal-pcn')");
  await assert("document.querySelector('[name=title]').value==='작성 중 PCN 초안'",'internal drafts survive navigation');
  const supplierRecords=['PCN','Issue'].map(type=>({ticketId:'SPLIT-'+type.toUpperCase(),ticketType:type,status:'Submitted',createdAt:'2026-10-02 09:00',supplier:{companyName:'TechL',category:'SMT_MODULE',submitter:'권태훈 부장',email:'thkwon@techl.co.kr'},targetProduct:{partName:'분리 '+type+' 품목',partNumber:type+'-PN',lotNo:type+'-LOT'},classification:{change4M:type==='PCN'?['Method']:[],riskLevel:'MINOR'},details:{title:'외주 '+type+' 구분용',description:'테스트'},sqeReview:{}}));
- await evaluate(`saveSupplierRecords(${JSON.stringify(supplierRecords)});switchNav('supplier-pcn');switchSupplierTab('watchtower')`);
+ await evaluate(`setSupplierTicketFixture(${JSON.stringify(supplierRecords)});switchNav('supplier-pcn');switchSupplierTab('watchtower')`);
  await assert("document.querySelector('.supplier-grid-table').innerText.includes('SPLIT-PCN')&&!document.querySelector('.supplier-grid-table').innerText.includes('SPLIT-ISSUE')",'supplier PCN list exclusive');
  await evaluate("switchNav('supplier-issues');switchSupplierTab('watchtower')");
  await assert("document.querySelector('.supplier-grid-table').innerText.includes('SPLIT-ISSUE')&&!document.querySelector('.supplier-grid-table').innerText.includes('SPLIT-PCN')",'supplier Issue list exclusive');

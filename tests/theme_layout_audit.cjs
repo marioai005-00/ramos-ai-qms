@@ -74,7 +74,7 @@ const wide=[...main.querySelectorAll('*')].filter(el=>visible(el)&&!el.closest('
    }
    console.log(theme+'/'+width+' empty views checked');
   }
-  await evaluate("saveSupplierRecords([])");await assert("loadSupplierRecords().length===0",'stored empty supplier list remains empty');
+  await evaluate("setSupplierTicketFixture([])");await assert("loadSupplierRecords().length===0",'stored empty supplier list remains empty');
   await evaluate("switchNav('new-case');document.getElementById('formClaimTitle').value='직접 작성한 새 임시 접수';saveIntakeDraft();");
   await call('Page.reload',{ignoreCache:true});await delay(300);for(let i=0;i<150;i++){if(await evaluate('window.QMS_APP_READY===true'))break;await delay(100);}await evaluate("switchNav('new-case')");
   await assert("document.getElementById('formClaimTitle').value==='직접 작성한 새 임시 접수'",'new intake draft persists after migration');
@@ -94,7 +94,7 @@ const wide=[...main.querySelectorAll('*')].filter(el=>visible(el)&&!el.closest('
  if(process.env.QMS_AUDIT_EVIDENCE_ONLY){
   await require('./case_evidence_audit.cjs')({call,send,evaluate,inspect,delay,root,out,label,errors,visualCase,origin});return;
  }
- await evaluate(`saveAppData=()=>{};persistCurrentEditor=()=>true;appData.cases=[${JSON.stringify(visualCase)}];appData.activeCaseId=appData.cases[0].id;appData.intakeQueue=[{...JSON.parse(JSON.stringify(appData.cases[0])),intakeId:'UI-DEMO-001',status:'Quality Review Pending',submittedAt:'2026-10-02 10:30',evidenceList:[],intakeRouting:{registeredBy:{name:'UI 점검용 사용자',dept:'품질혁신팀'},primaryOwner:{name:'점검 담당자'}},riskSignals:{}}];saveSupplierRecords([{ticketId:'UI-TEST-PCN',ticketType:'PCN',status:'Submitted',createdAt:'2026-10-02 10:00',supplier:{category:'SMT_MODULE',companyName:'TechL',plant:'',submitter:'UI 점검 담당자',email:'ui@example.invalid'},targetProduct:{customer:'UI 점검 고객',partName:'UI 점검 품목',partNumber:'UI-TEST-PART',lotNo:'UI-TEST-LOT'},classification:{change4M:['Method'],riskLevel:'MINOR',reasonType:'Quality_Improvement'},details:{title:'UI 점검용 변경 요청',description:'운영 등록 아님',comparisonTable:[],plannedSampleDate:'',plannedMassDate:''},evidenceFiles:[],sqeReview:{}}]);renderCaseSelector();renderCurrentView();`);
+ await evaluate(`saveAppData=()=>{};persistCurrentEditor=()=>true;appData.cases=[${JSON.stringify(visualCase)}];appData.activeCaseId=appData.cases[0].id;appData.intakeQueue=[{...JSON.parse(JSON.stringify(appData.cases[0])),intakeId:'UI-DEMO-001',status:'Quality Review Pending',submittedAt:'2026-10-02 10:30',evidenceList:[],intakeRouting:{registeredBy:{name:'UI 점검용 사용자',dept:'품질혁신팀'},primaryOwner:{name:'점검 담당자'}},riskSignals:{}}];setSupplierTicketFixture([{ticketId:'UI-TEST-PCN',ticketType:'PCN',status:'Submitted',createdAt:'2026-10-02 10:00',supplier:{category:'SMT_MODULE',companyName:'TechL',plant:'',submitter:'UI 점검 담당자',email:'ui@example.invalid'},targetProduct:{customer:'UI 점검 고객',partName:'UI 점검 품목',partNumber:'UI-TEST-PART',lotNo:'UI-TEST-LOT'},classification:{change4M:['Method'],riskLevel:'MINOR',reasonType:'Quality_Improvement'},details:{title:'UI 점검용 변경 요청',description:'운영 등록 아님',comparisonTable:[],plannedSampleDate:'',plannedMassDate:''},evidenceFiles:[],sqeReview:{}}]);renderCaseSelector();renderCurrentView();`);
 
  if(process.env.QMS_AUDIT_TRIAGE_RESULT_ONLY){
   await require('./triage_result_audit.cjs')({call,evaluate,inspect,delay,out,label,errors});return;

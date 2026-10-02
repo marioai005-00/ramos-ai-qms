@@ -22,172 +22,140 @@ function getOfficialSupplierForUser(user) {
   return MASTER_SUPPLIERS.find(supplier => supplier.username === user.username) || null;
 }
 
-const INITIAL_SUPPLIER_RECORDS = [];
+const SUPPLIER_TICKET_API = '/__api__/qms/supplier-tickets';
+
+// Central records: `raw` is what the server returned, `display` is the HTML-escaped copy the views render.
+const supplierTicketStore = { actor: '', raw: [], display: [], loaded: false, loading: false, error: '' };
+
+function escapeSupplierDisplay(value) {
+  if (typeof value === 'string') return value.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  if (Array.isArray(value)) return value.map(escapeSupplierDisplay);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, escapeSupplierDisplay(item)]));
+  return value;
+}
+
+function setSupplierRecords(records) {
+  supplierTicketStore.raw = records;
+  supplierTicketStore.display = escapeSupplierDisplay(records);
+}
+
+function supplierTicketActor() {
+  const actor = (typeof QMSApi !== 'undefined' && QMSApi.getState().user?.username) || '';
+  if (actor !== supplierTicketStore.actor) {
+    Object.assign(supplierTicketStore, { actor, loaded: false, loading: false, error: '' });
+    setSupplierRecords([]);
+  }
+  return actor;
+}
 
 function loadSupplierRecords() {
+  supplierTicketActor();
+  return supplierTicketStore.display;
+}
+
+function getSupplierTicketRaw(ticketId) {
+  return supplierTicketStore.raw.find(record => record.ticketId === ticketId) || null;
+}
+
+async function refreshSupplierRecords(force = false) {
+  const actor = supplierTicketActor();
+  if (!actor || supplierTicketStore.loading || (supplierTicketStore.loaded && !force)) return supplierTicketStore.display;
+  supplierTicketStore.loading = true;
+  supplierTicketStore.error = '';
   try {
-    const raw = localStorage.getItem(SUPPLIER_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-    }
-  } catch (e) {
-    console.warn('[SupplierData] Stored data retained; unable to read records:', e);
-    return [];
+    const result = await QMSApi.request(SUPPLIER_TICKET_API);
+    if (supplierTicketActor() === actor) setSupplierRecords(result.items || []);
+  } catch (error) {
+    if (supplierTicketActor() === actor) supplierTicketStore.error = error.message;
+  } finally {
+    if (supplierTicketStore.actor === actor) Object.assign(supplierTicketStore, { loading: false, loaded: true });
   }
-  saveSupplierRecords(INITIAL_SUPPLIER_RECORDS);
-  return INITIAL_SUPPLIER_RECORDS;
+  return supplierTicketStore.display;
 }
 
-function saveSupplierRecords(records) {
-  try {
-    localStorage.setItem(SUPPLIER_STORAGE_KEY, JSON.stringify(records));
-  } catch (e) {
-    console.error('[SupplierData] Failed to save records:', e);
-  }
+function applySupplierRecord(record) {
+  const others = supplierTicketStore.raw.filter(item => item.ticketId !== record.ticketId);
+  setSupplierRecords([record, ...others]);
+  return record;
 }
 
-function generateSupplierTicketId(type) {
-  const prefix = type === 'PCN' ? 'PCN' : 'SQ';
-  const year = new Date().getFullYear();
-  const records = loadSupplierRecords();
-  const seqs = records
-    .map(r => r.ticketId)
-    .filter(Boolean)
-    .map(id => {
-      const parts = id.split('-');
-      return parts.length >= 3 ? parseInt(parts[2], 10) : 0;
-    })
-    .filter(n => !isNaN(n) && n > 0);
-  const maxSeq = seqs.length ? Math.max(...seqs) : 0;
-  const nextSeq = String(maxSeq + 1).padStart(3, '0');
-  return `${prefix}-${year}-${nextSeq}`;
+async function supplierTicketFilePayload(files) {
+  const selected = Array.from(files || []);
+  return Promise.all(selected.map(async file => ({ filename: file.name, dataUrl: await fileAsDataURL(file) })));
 }
 
-function determine4MRiskLevel(change4M = [], reasonType = '') {
-  if (change4M.includes('Material') || reasonType === 'Process_Abnormal' || reasonType === 'Cost_Reduction_And_Reliability') {
-    return 'MAJOR';
-  }
-  if (change4M.length >= 2) {
-    return 'MAJOR';
-  }
-  return 'MINOR';
+async function createSupplierTicket(data, files) {
+  const result = await QMSApi.request(SUPPLIER_TICKET_API, { method: 'POST', body: { ...data, files: await supplierTicketFilePayload(files) } });
+  return applySupplierRecord(result.record);
 }
 
-function createSupplierTicket(data) {
-  const records = loadSupplierRecords();
-  const ticketId = generateSupplierTicketId(data.ticketType || 'PCN');
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const dd = String(now.getDate()).padStart(2, '0');
-  const hh = String(now.getHours()).padStart(2, '0');
-  const min = String(now.getMinutes()).padStart(2, '0');
-  const createdAt = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
-
-  const isIssue = (data.ticketType === 'Issue');
-  const newTicket = {
-    ticketId,
-    ticketType: data.ticketType || 'PCN',
-    status: 'Submitted',
-    createdAt,
-    supplier: {
-      category: data.supplierCategory || 'OSAT_PKG',
-      companyName: data.companyName || '미지정 협력사',
-      plant: data.plant || '',
-      submitter: data.submitter || '',
-      email: data.email || '',
-      phone: data.phone || ''
-    },
-    targetProduct: {
-      customer: data.customer || 'LGE DTV',
-      partName: data.partName || '16GB eMMC v5.1',
-      partNumber: data.partNumber || 'RMS-EMMC-16G-LGE01',
-      lotNo: data.lotNo || ''
-    },
-    classification: {
-      change4M: Array.isArray(data.change4M) ? data.change4M : ['Material'],
-      issueCategory: data.issueCategory || (isIssue ? 'Process_Abnormal' : '4M_Change_Request'),
-      riskLevel: isIssue ? 'MAJOR' : determine4MRiskLevel(data.change4M, data.reasonType),
-      reasonType: data.reasonType || (isIssue ? 'Process_Abnormal' : 'Quality_Improvement')
-    },
-    details: {
-      title: data.title || (isIssue ? '[긴급 외주 품질이상 통보]' : '[4M 사전 변경 승인 요청]'),
-      description: data.description || '',
-      comparisonTable: Array.isArray(data.comparisonTable) && data.comparisonTable.length > 0 ? data.comparisonTable : [
-        { item: '주요 사양/공정 조건', current: '현행 사양 (기존)', proposed: '신규 사양 (제안)', riskAssessment: '신뢰성 영향 평가 완료' }
-      ],
-      plannedSampleDate: data.plannedSampleDate || '',
-      plannedMassDate: data.plannedMassDate || ''
-    },
-    incident: isIssue ? (data.incident || {
-      defectCategory: data.defectCategory || 'Yield_Drop',
-      processStep: data.processStep || 'Molding_Underfill',
-      inputQty: Number(data.inputQty || 0),
-      defectQty: Number(data.defectQty || 0),
-      defectRate: data.defectRate || '0.00',
-      lineAction: data.lineAction || 'Line_Stop',
-      quarantineQty: Number(data.quarantineQty || 0),
-      quarantineLocation: data.quarantineLocation || '',
-      inTransitAction: data.inTransitAction || '',
-      containmentAction: data.containmentAction || '',
-      faReportDeadline: data.faReportDeadline || '',
-      emergencySupportRequest: data.emergencySupportRequest || ''
-    }) : null,
-    evidenceFiles: Array.isArray(data.evidenceFiles) ? data.evidenceFiles : [],
-    sqeReview: {
-      reviewer: '미지정 (접수 대기)',
-      reviewedAt: null,
-      decision: 'Pending',
-      comment: '',
-      bound8DCaseId: null
-    }
-  };
-
-  records.unshift(newTicket);
-  saveSupplierRecords(records);
-  return newTicket;
+async function updateSupplierTicket(ticketId, body, files) {
+  const current = getSupplierTicketRaw(ticketId);
+  if (!current) throw new Error('해당 접수 건을 찾을 수 없습니다. 목록을 새로고침해 주세요.');
+  const result = await QMSApi.request(`${SUPPLIER_TICKET_API}/${encodeURIComponent(ticketId)}`, {
+    method: 'POST', body: { ...body, expectedRevision: current.revision, files: await supplierTicketFilePayload(files) }
+  });
+  return applySupplierRecord(result.record);
 }
 
-function updateSupplierTicketStatus(ticketId, decision, reviewComment = '', reviewerName = '') {
-  const records = loadSupplierRecords();
-  const ticket = records.find(r => r.ticketId === ticketId);
-  if (!ticket) return null;
-
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const dd = String(now.getDate()).padStart(2, '0');
-  const hh = String(now.getHours()).padStart(2, '0');
-  const min = String(now.getMinutes()).padStart(2, '0');
-  const reviewedAt = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
-
-  ticket.status = decision;
-  ticket.sqeReview = {
-    reviewer: reviewerName || (window.CURRENT_USER ? window.CURRENT_USER.name : 'SQE 담당자'),
-    reviewedAt,
-    decision,
-    comment: reviewComment,
-    bound8DCaseId: ticket.sqeReview?.bound8DCaseId || null
-  };
-
-  saveSupplierRecords(records);
-  return ticket;
+function reviewSupplierTicket(ticketId, decision, comment) {
+  return updateSupplierTicket(ticketId, { action: 'review', decision, comment });
 }
 
 function bindSupplierTicketTo8DCase(ticketId, caseId) {
-  const records = loadSupplierRecords();
-  const ticket = records.find(r => r.ticketId === ticketId);
-  if (!ticket) return false;
+  return updateSupplierTicket(ticketId, { action: 'bind', caseId, comment: '' });
+}
 
-  ticket.status = '8D_Escalated';
-  if (!ticket.sqeReview) ticket.sqeReview = {};
-  ticket.sqeReview.bound8DCaseId = caseId;
-  ticket.sqeReview.decision = '8D_Escalated';
-  saveSupplierRecords(records);
-  return true;
+function resubmitSupplierTicket(ticketId, reportTitle, comment, files) {
+  return updateSupplierTicket(ticketId, { action: 'resubmit', reportTitle, comment }, files);
+}
+
+async function downloadSupplierTicketFile(ticketId, fileId) {
+  const file = getSupplierTicketRaw(ticketId)?.evidenceFiles?.find(item => item.id === fileId);
+  if (!file) return alert('첨부 원본을 찾을 수 없습니다.');
+  const response = await fetch(`${SUPPLIER_TICKET_API}/${encodeURIComponent(ticketId)}/files/${encodeURIComponent(fileId)}`, { credentials: 'same-origin', cache: 'no-store' });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    return alert(error.error || `원본 요청 실패 (HTTP ${response.status})`);
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = file.name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// UI audit scripts render the views from in-memory records; nothing is sent to or stored on the server.
+function setSupplierTicketFixture(records) {
+  supplierTicketActor();
+  setSupplierRecords(records);
+  supplierTicketStore.loaded = true;
+}
+
+// Tickets saved by earlier versions stay in this browser only. They are never deleted or uploaded automatically.
+function legacyBrowserSupplierRecords() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SUPPLIER_STORAGE_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function exportLegacyBrowserSupplierRecords() {
+  const records = legacyBrowserSupplierRecords();
+  if (!records.length) return alert('이 브라우저에 남아 있는 이전 접수 기록이 없습니다.');
+  const url = URL.createObjectURL(new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'supplier_tickets_browser_backup.json';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // Global exports
@@ -196,9 +164,16 @@ if (typeof window !== 'undefined') {
   window.SUPPLIER_CATEGORIES = SUPPLIER_CATEGORIES;
   window.MASTER_SUPPLIERS = MASTER_SUPPLIERS;
   window.getOfficialSupplierForUser = getOfficialSupplierForUser;
+  window.supplierTicketStore = supplierTicketStore;
   window.loadSupplierRecords = loadSupplierRecords;
-  window.saveSupplierRecords = saveSupplierRecords;
+  window.getSupplierTicketRaw = getSupplierTicketRaw;
+  window.refreshSupplierRecords = refreshSupplierRecords;
+  window.setSupplierTicketFixture = setSupplierTicketFixture;
   window.createSupplierTicket = createSupplierTicket;
-  window.updateSupplierTicketStatus = updateSupplierTicketStatus;
+  window.reviewSupplierTicket = reviewSupplierTicket;
   window.bindSupplierTicketTo8DCase = bindSupplierTicketTo8DCase;
+  window.resubmitSupplierTicket = resubmitSupplierTicket;
+  window.downloadSupplierTicketFile = downloadSupplierTicketFile;
+  window.legacyBrowserSupplierRecords = legacyBrowserSupplierRecords;
+  window.exportLegacyBrowserSupplierRecords = exportLegacyBrowserSupplierRecords;
 }

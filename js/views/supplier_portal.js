@@ -157,6 +157,7 @@ function renderSupplierPortalView() {
   const isSupplier = Boolean(activeUser && activeUser.isSupplier);
   const supplierCompany = isSupplier ? (getOfficialSupplierForUser(activeUser)?.name || '') : null;
 
+  ensureSupplierRecordsLoaded();
   let records = loadSupplierRecords();
   if (isSupplier && supplierCompany) {
     records = records.filter(r => r.supplier && (r.supplier.companyName === supplierCompany || r.supplier.email === (activeUser ? activeUser.email : '')));
@@ -187,7 +188,7 @@ function renderSupplierPortalView() {
         <button class="btn ${section==='PCN'?'btn-primary':'btn-secondary'}" onclick="setSupplierSection('PCN')">PCN 변경 관리 (${allVisibleRecords.filter(r=>r.ticketType==='PCN').length})</button>
         <button class="btn ${section==='Issue'?'btn-primary':'btn-secondary'}" onclick="setSupplierSection('Issue')">Issue·부적합 (${allVisibleRecords.filter(r=>r.ticketType==='Issue').length})</button>
       </div>
-      <p class="iq-note">외주 접수 기록은 현재 브라우저에 저장됩니다. 다른 PC·브라우저에서 함께 관리하려면 공유 저장 연동이 필요합니다.</p>
+      ${renderSupplierStorageNote()}
       <!-- Tab Body -->
       <div id="supplierTabContent">
         ${supplierPortalState.activeTab === 'watchtower'
@@ -363,7 +364,7 @@ function renderSupplierWatchtower(records, kpi, isSupplier = false) {
                   ${item.evidenceFiles && item.evidenceFiles.length > 0 ? `
                     <div style="display:flex; gap:4px; margin-top:5px; flex-wrap:wrap;">
                       ${item.evidenceFiles.map(f => `
-                        <button type="button" class="btn btn-xs btn-outline-info" onclick="event.stopPropagation(); openDocumentViewer('${f.name}')" title="클릭하여 즉시 문서/성적서 뷰어로 확인">
+                        <button type="button" class="btn btn-xs btn-outline-info" onclick="event.stopPropagation(); downloadSupplierTicketFile('${item.ticketId}','${f.id}')" title="보관된 원본 내려받기">
                           📎 ${f.name.length > 24 ? f.name.slice(0, 22) + '...' : f.name}
                         </button>
                       `).join('')}
@@ -811,10 +812,6 @@ function renderIssueTrackForm(f) {
   `;
 }
 
-function supplierFileMetadata(file) {
-  return { name:file.name, byteSize:file.size, size:(file.size/1024).toFixed(1)+' KB', type:file.type || file.name.split('.').pop(), storedBody:false };
-}
-
 function handleSupplierFileUpload(event, type) {
   supplierPendingFiles[type] = Array.from(event.target.files || []);
   const list = document.getElementById(type === 'Issue' ? 'issueUploadedFileList' : 'pcnUploadedFileList');
@@ -836,7 +833,7 @@ function resetIntakeForm() {
   }
 }
 
-function handleSupplierFormSubmit(e) {
+async function handleSupplierFormSubmit(e) {
   e.preventDefault();
   const form = e.target;
   const formData = new FormData(form);
@@ -851,55 +848,64 @@ function handleSupplierFormSubmit(e) {
     return;
   }
 
+  const text = name => String(formData.get(name) || '').trim();
+  // Blank quantities stay unknown instead of being stored as 0.
+  const quantity = name => text(name) === '' ? null : Number(text(name));
   const change4M = [];
   form.querySelectorAll('input[name="change4M"]:checked').forEach(cb => change4M.push(cb.value));
-  if (change4M.length === 0) change4M.push(isIssue ? 'Machine' : 'Material');
+  if (!isIssue && change4M.length === 0) {
+    alert('4M 변경 구분을 하나 이상 선택해 주세요.');
+    return;
+  }
 
   const ticketData = {
     ticketType,
-    supplierCategory: officialSupplier.category,
-    companyName: officialSupplier.name,
-    plant: formData.get('plant'),
-    submitter: officialSupplier.defaultContact,
-    email: officialSupplier.email,
-    phone: formData.get('phone'),
-    customer: formData.get('customer'),
-    partName: formData.get('partName'),
-    partNumber: formData.get('partNumber'),
-    lotNo: formData.get('lotNo'),
+    supplierId: officialSupplier.id,
+    plant: text('plant'),
+    phone: text('phone'),
+    customer: text('customer'),
+    partName: text('partName'),
+    partNumber: text('partNumber'),
+    lotNo: text('lotNo'),
     change4M,
-    reasonType: formData.get('reasonType') || (isIssue ? 'Process_Abnormal' : 'Quality_Improvement'),
-    title: formData.get('title'),
-    description: formData.get('description'),
-    plannedSampleDate: formData.get('plannedSampleDate') || '',
-    plannedMassDate: formData.get('plannedMassDate') || '',
+    reasonType: text('reasonType'),
+    title: text('title'),
+    description: text('description'),
+    plannedSampleDate: text('plannedSampleDate'),
+    plannedMassDate: text('plannedMassDate'),
     comparisonTable: isIssue ? [] : supplierPortalState.comparisonRows.filter(r => r.item.trim() !== '')
   };
 
   if (isIssue) {
     ticketData.incident = {
-      defectCategory: formData.get('defectCategory') || 'Yield_Drop',
-      processStep: formData.get('processStep') || 'Molding_Underfill',
-      inputQty: Number(formData.get('inputQty') || 0),
-      defectQty: Number(formData.get('defectQty') || 0),
-      defectRate: formData.get('defectRate') || '0.00',
-      lineAction: formData.get('lineAction') || 'Line_Stop',
-      quarantineQty: Number(formData.get('quarantineQty') || 0),
-      quarantineLocation: formData.get('quarantineLocation') || '',
-      inTransitAction: formData.get('inTransitAction') || '',
-      containmentAction: formData.get('containmentAction') || '',
-      faReportDeadline: formData.get('faReportDeadline') || '',
-      emergencySupportRequest: formData.get('emergencySupportRequest') || ''
+      defectCategory: text('defectCategory'),
+      processStep: text('processStep'),
+      inputQty: quantity('inputQty'),
+      defectQty: quantity('defectQty'),
+      lineAction: text('lineAction'),
+      quarantineQty: quantity('quarantineQty'),
+      quarantineLocation: text('quarantineLocation'),
+      inTransitAction: text('inTransitAction'),
+      containmentAction: text('containmentAction'),
+      faReportDeadline: text('faReportDeadline'),
+      emergencySupportRequest: text('emergencySupportRequest')
     };
-    ticketData.evidenceFiles = (supplierPendingFiles[ticketType] || []).map(supplierFileMetadata);
-  } else {
-    ticketData.evidenceFiles = (supplierPendingFiles[ticketType] || []).map(supplierFileMetadata);
   }
 
-  const created = createSupplierTicket(ticketData);
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (submitButton) submitButton.disabled = true;
+  let created;
+  try {
+    created = await createSupplierTicket(ticketData, supplierPendingFiles[ticketType] || []);
+  } catch (error) {
+    if (submitButton) submitButton.disabled = false;
+    alert(`접수를 저장하지 못했습니다. 입력 내용은 그대로 유지됩니다.\n${error.message}`);
+    return;
+  }
   supplierPendingFiles[ticketType] = [];
+  Object.assign(supplierPortalState.intakeForm, { title: '', description: '' });
 
-  alert(`[접수 완료] 외주 접수번호 '${created.ticketId}'가 성공적으로 발급되었습니다.\n현재 브라우저의 해당 접수 목록에 저장되었습니다. 다른 PC와의 공유 저장은 아직 연결되지 않았습니다.`);
+  alert(`[접수 완료] 외주 접수번호 '${created.ticketId}'가 발급되었습니다.\n중앙 서버에 저장되어 사내 담당자 화면에서도 조회됩니다. 첨부 원본 ${created.evidenceFiles.length}건을 함께 보관했습니다.`);
 
   supplierPortalState.activeTab = 'watchtower';
   renderCurrentView();
@@ -1015,21 +1021,34 @@ function openSupplierTicketModal(ticketId) {
                 <span>🤖 AI SQE 레포트 정밀 감사 & 보완점 추출</span>
               </button>
             ` : `
-              <span style="font-size:0.72rem; color:var(--text-muted);">* 파일 클릭 시 통합 문서/데이터 뷰어가 즉시 실행됩니다.</span>
+              <span style="font-size:0.72rem; color:var(--text-muted);">* 파일을 누르면 중앙 서버에 보관된 원본을 내려받습니다.</span>
             `}
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             ${(ticket.evidenceFiles || []).map(f => `
-              <div class="evidence-file-chip" onclick="openDocumentViewer('${f.name}')" title="클릭하여 문서/데이터 바로보기">
+              <div class="evidence-file-chip" onclick="downloadSupplierTicketFile('${ticket.ticketId}','${f.id}')" title="보관된 원본 내려받기">
                 <span class="file-icon">📄</span>
                 <span class="file-name">${f.name}</span>
                 <span class="file-size num-mono">(${f.size})</span>
                 ${f.version ? `<span class="badge-pill badge-info" style="font-size:0.65rem; padding:1px 5px;">${f.version}</span>` : ''}
-                <span class="file-view-badge">👁️ 바로보기</span>
+                <span class="file-view-badge">원본 내려받기</span>
               </div>
             `).join('')}
           </div>
         </div>
+
+        ${(ticket.resubmissions || []).length ? `
+          <div style="margin-bottom:14px;">
+            <label style="font-size:0.78rem; font-weight:700; color:var(--text-secondary);">외주사 보완 제출 이력 (${ticket.resubmissions.length}건)</label>
+            ${ticket.resubmissions.map((item, index) => `
+              <div style="font-size:0.8rem; border:1px solid var(--border); border-radius:6px; padding:8px 10px; margin-top:6px;">
+                <b>보완 ${index + 1}차</b> · ${item.submittedBy?.name || ''} · <span class="num-mono">${item.submittedAt || ''}</span> · 원본 ${item.fileCount}건
+                ${item.title ? `<div>${item.title}</div>` : ''}
+                ${item.comment ? `<div style="color:var(--text-secondary);">${item.comment}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
 
         ${!isSupplier ? `<div id="aiSupplierAuditContainer" style="margin-bottom:14px;"></div>` : ''}
 
@@ -1092,16 +1111,14 @@ function openSupplierTicketModal(ticketId) {
             <div class="supplier-field-grid col-2">
               <div class="form-group">
                 <label class="form-label">SQE 담당 심의자</label>
-                <input type="text" class="form-control" id="modalReviewer" value="${ticket.sqeReview?.reviewer || (activeUser ? activeUser.name : '김성중 Senior Pro')}" readonly>
+                <input type="text" class="form-control" id="modalReviewer" value="${activeUser ? activeUser.name : ''}" readonly title="심의자는 로그인한 계정으로 기록됩니다">
               </div>
               <div class="form-group">
                 <label class="form-label">심의 판정 선택</label>
                 <select class="form-control" id="modalDecision" style="font-weight:700;">
                   <option value="Revision_Requested" ${ticket.status === 'Revision_Requested' ? 'selected' : ''}>🟡 외주사 보완 요청 (추가 시험 성적서/레포트 재제출 요구)</option>
-                  <option value="Report_Submitted" ${ticket.status === 'Report_Submitted' ? 'selected' : ''}>📤 외주사 레포트 제출 완료 (검토 대기)</option>
                   <option value="Under_Review" ${ticket.status === 'Under_Review' ? 'selected' : ''}>◐ 심의 중 (신뢰성 추가 성적서 보완 요구)</option>
                   <option value="Approved" ${ticket.status === 'Approved' ? 'selected' : ''}>✓ 최종 승인 (4M 변경 승인 및 양산 적용 허가)</option>
-                  <option value="8D_Escalated" ${ticket.status === '8D_Escalated' ? 'selected' : ''}>⚡ 사내 8D Case 즉시 승격 (심각 품질 이슈)</option>
                   <option value="Rejected" ${ticket.status === 'Rejected' ? 'selected' : ''}>✕ 변경 반려 (품질/신뢰성 기준 미달)</option>
                 </select>
               </div>
@@ -1136,7 +1153,7 @@ function openSupplierTicketModal(ticketId) {
           ` : `
             <button class="btn btn-danger btn-sm" onclick="handleEscalateTo8D('${ticket.ticketId}')" style="font-weight:700;">
               <i data-lucide="zap" style="width:14px; height:14px;"></i>
-              <span>🚀 8D Case 즉시 연계</span>
+              <span>현재 선택한 8D Case에 연결</span>
             </button>
             <button class="btn btn-primary btn-sm" onclick="submitSupplierReviewDecision('${ticket.ticketId}')" style="font-weight:800; padding:6px 16px;">
               <i data-lucide="save" style="width:14px; height:14px;"></i>
@@ -1153,56 +1170,46 @@ function openSupplierTicketModal(ticketId) {
   }
 }
 
-function submitSupplierReviewDecision(ticketId) {
+async function submitSupplierReviewDecision(ticketId) {
   const decisionEl = document.getElementById('modalDecision');
   const commentEl = document.getElementById('modalComment');
-  const reviewerEl = document.getElementById('modalReviewer');
-
   if (!decisionEl) return;
 
   const decision = decisionEl.value;
-  const comment = commentEl ? commentEl.value : '';
-  const reviewer = reviewerEl ? reviewerEl.value : '';
-
-  updateSupplierTicketStatus(ticketId, decision, comment, reviewer);
-  alert(`[심의 완료] 티켓 '${ticketId}'의 상태가 '${decision}'(으)로 업데이트되었습니다.`);
+  const comment = commentEl ? commentEl.value.trim() : '';
+  let updated;
+  try {
+    updated = await reviewSupplierTicket(ticketId, decision, comment);
+  } catch (error) {
+    alert(`심의 결과를 저장하지 못했습니다.\n${error.message}`);
+    if (error.code === 'REVISION_CONFLICT') { await refreshSupplierRecords(true); closeModal(); renderCurrentView(); }
+    return;
+  }
+  alert(`[심의 저장] '${ticketId}' 상태가 '${updated.status}'(으)로 기록되었습니다.`);
   closeModal();
   renderCurrentView();
 }
 
-function handleEscalateTo8D(ticketId) {
-  const records = loadSupplierRecords();
-  const ticket = records.find(r => r.ticketId === ticketId);
+async function handleEscalateTo8D(ticketId) {
+  const ticket = getSupplierTicketRaw(ticketId);
   if (!ticket) return;
-
-  const isIssue = (ticket.ticketType === 'Issue');
-
-  if (confirm(`외주 접수 건 [${ticketId}]을 사내 정식 8D 품질 문제해결 케이스로 즉시 연계 승격하시겠습니까?\n\n- 대상 협력사: ${ticket.supplier.companyName}\n- 문제 현상: ${ticket.details.title}\n- 발생 라인 및 봉쇄 내역이 8D D2/D3로 자동 전계됩니다.`)) {
-    bindSupplierTicketTo8DCase(ticketId, 'RAMOS-8D-20260901-01');
-
-    if (window.CURRENT_CASE) {
-      if (isIssue && ticket.incident) {
-        window.CURRENT_CASE.d2 = window.CURRENT_CASE.d2 || {};
-        window.CURRENT_CASE.d2.problemStatement = `[외주사 품질이상 긴급 승격] ${ticket.supplier.companyName} (${ticket.supplier.plant}) ${ticket.details.title}\n- 발생 공정: ${ticket.incident.processStep}\n- 불량 규모: 투입 ${ticket.incident.inputQty}개 중 불량 ${ticket.incident.defectQty}개 (불량률: ${ticket.incident.defectRate}%)\n- 현상 상세: ${ticket.details.description}`;
-        
-        window.CURRENT_CASE.d3 = window.CURRENT_CASE.d3 || {};
-        window.CURRENT_CASE.d3.containment = `[3-Point 유출 봉쇄] 라인 조치: ${ticket.incident.lineAction}, 공장 격리: ${ticket.incident.quarantineQty}개 (${ticket.incident.quarantineLocation}), 이동 재고: ${ticket.incident.inTransitAction}\n초동 조치: ${ticket.incident.containmentAction}`;
-      } else {
-        window.CURRENT_CASE.d2 = window.CURRENT_CASE.d2 || {};
-        window.CURRENT_CASE.d2.problemStatement = `[외주 4M PCN 연계 승격] ${ticket.supplier.companyName} ${ticket.details.title}\n${ticket.details.description}`;
-      }
-      if (typeof window.saveCurrentCaseToStorage === 'function') {
-        window.saveCurrentCaseToStorage();
-      }
-    }
-
-    closeModal();
-    alert(`[8D 승격 완료] 외주 접수 건 [${ticketId}]가 'RAMOS-8D-20260901-01' 케이스로 연동되었습니다. D2 현상 규명 워크스페이스로 이동합니다.`);
-
-    if (typeof window.switchStage === 'function') {
-      window.switchStage('D2');
-    }
+  // Linking records a reference only. It never creates a Case or writes D2/D3 content.
+  const targetCase = typeof getActiveCase === 'function' ? getActiveCase() : null;
+  if (!targetCase) {
+    alert('연결할 8D Case가 없습니다. 먼저 고객 부적합 접수와 품질 검토를 거쳐 Case를 등록한 뒤, 해당 Case를 선택하고 다시 시도해 주세요.');
+    return;
   }
+  if (!confirm(`외주 접수 건 [${ticketId}]을 현재 선택한 8D Case [${targetCase.id}]에 연결하시겠습니까?\n\n- 대상 협력사: ${ticket.supplier.companyName}\n- 접수 제목: ${ticket.details.title}\n\n연결 기록만 남기며 Case의 D2·D3 내용은 변경하지 않습니다.`)) return;
+  try {
+    await bindSupplierTicketTo8DCase(ticketId, targetCase.id);
+  } catch (error) {
+    alert(`8D Case에 연결하지 못했습니다.\n${error.message}`);
+    if (error.code === 'REVISION_CONFLICT') { await refreshSupplierRecords(true); closeModal(); renderCurrentView(); }
+    return;
+  }
+  closeModal();
+  alert(`외주 접수 건 [${ticketId}]을 8D Case [${targetCase.id}]에 연결했습니다.`);
+  renderCurrentView();
 }
 
 function printSupplierApprovalDoc(ticketId) {
@@ -1410,7 +1417,7 @@ function openSupplierReportUploadModal(ticketId) {
       <form onsubmit="handleSupplierReportUploadSubmit(event, '${ticket.ticketId}')">
         <div class="form-group" style="margin-bottom:12px;">
           <label class="form-label" style="font-weight:700; font-size:0.78rem;">보완 레포트 개정 번호 / 표제</label>
-          <input type="text" class="form-control" name="reportRevisionTitle" value="[보완 2차] SQE 보완 요구사항 반영 신뢰성 가속 성적서 및 분석 리포트" required>
+          <input type="text" class="form-control" name="reportRevisionTitle" placeholder="예: 보완 1차 신뢰성 성적서" required>
         </div>
 
         <!-- Free Format Upload Dropzone -->
@@ -1464,33 +1471,47 @@ function handleResubmitFileSelect(e) {
   }
 }
 
-function handleSupplierReportUploadSubmit(e, ticketId) {
+async function handleSupplierReportUploadSubmit(e, ticketId) {
   e.preventDefault();
-  const records = loadSupplierRecords();
-  const ticket = records.find(r => r.ticketId === ticketId);
-  if (!ticket) return;
-
   const form = e.target;
   const formData = new FormData(form);
-  const resubmitComment = formData.get('resubmitComment') || '';
-
-  // Record only files actually chosen by the user; no mock report attachments.
+  // Only files actually chosen by the user are stored; their bytes go to the central server.
   const revisedFiles = Array.from(form.querySelector('input[type="file"]')?.files || []);
   if (!revisedFiles.length) return alert('제출할 보고서 파일을 선택해 주세요.');
-  ticket.evidenceFiles = ticket.evidenceFiles || [];
-  ticket.evidenceFiles.push(...revisedFiles.map(supplierFileMetadata));
 
-  ticket.status = 'Report_Submitted';
-  if (!ticket.sqeReview) ticket.sqeReview = {};
-  const prevComment = ticket.sqeReview.comment || '';
-  ticket.sqeReview.comment = `[외주사 보완 제출 완료] ${resubmitComment}\n(직전 SQE 지침: ${prevComment})`;
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (submitButton) submitButton.disabled = true;
+  try {
+    await resubmitSupplierTicket(ticketId, String(formData.get('reportRevisionTitle') || '').trim(), String(formData.get('resubmitComment') || '').trim(), revisedFiles);
+  } catch (error) {
+    if (submitButton) submitButton.disabled = false;
+    alert(`보완 자료를 제출하지 못했습니다.\n${error.message}`);
+    return;
+  }
 
-  saveSupplierRecords(records);
-
-  alert(`[보완 레포트 제출 완료]\n티켓 [${ticketId}]에 대한 보완 보고서 ${revisedFiles.length}건의 파일 정보가 접수되었습니다.\n라모스 SQE 관제 화면의 상태가 'Report_Submitted'로 전환되었습니다.`);
+  alert(`[보완 자료 제출 완료]\n접수 건 [${ticketId}]에 원본 ${revisedFiles.length}건을 보관했습니다. 사내 심의 화면에 '보완 자료 제출' 상태로 표시됩니다.`);
 
   closeModal();
   renderCurrentView();
+}
+
+function ensureSupplierRecordsLoaded(force = false) {
+  const store = supplierTicketStore;
+  if (store.loading || (store.loaded && !force)) return;
+  refreshSupplierRecords(force).then(() => {
+    if (['supplier-pcn','supplier-issues','supplier-portal'].includes(appData.currentView)) renderCurrentView();
+  });
+}
+
+function renderSupplierStorageNote() {
+  const store = supplierTicketStore;
+  const legacy = legacyBrowserSupplierRecords().length;
+  const status = store.error
+    ? `중앙 서버에서 외주 접수 기록을 불러오지 못했습니다: ${escapeSupplierDisplay(store.error)}`
+    : store.loading || !store.loaded
+      ? '중앙 서버에서 외주 접수 기록을 불러오는 중입니다.'
+      : '외주 접수 기록과 첨부 원본은 중앙 서버에 저장되어 사내 담당자와 해당 외주사가 함께 조회합니다.';
+  return `<p class="iq-note">${status} <button type="button" class="btn btn-secondary btn-xs" onclick="ensureSupplierRecordsLoaded(true)">새로고침</button>${legacy ? `<br>이 브라우저에만 남아 있는 이전 접수 기록 ${legacy}건은 목록에 표시되지 않습니다. 삭제하지 않았으며 필요하면 내려받아 보관할 수 있습니다. <button type="button" class="btn btn-secondary btn-xs" onclick="exportLegacyBrowserSupplierRecords()">이전 기록 내려받기</button>` : ''}</p>`;
 }
 
 // Global exports
@@ -1519,4 +1540,5 @@ if (typeof window !== 'undefined') {
   window.openSupplierReportUploadModal = openSupplierReportUploadModal;
   window.handleResubmitFileSelect = handleResubmitFileSelect;
   window.handleSupplierReportUploadSubmit = handleSupplierReportUploadSubmit;
+  window.ensureSupplierRecordsLoaded = ensureSupplierRecordsLoaded;
 }

@@ -490,6 +490,26 @@ class PortalHandler(SimpleHTTPRequestHandler):
         if notice_record:
             self._send_json(200, {"success": True, "record": QMS_STORE.get_supplier_notice(self._session_identity(), notice_record.group(1))})
             return True
+        if clean_path == "/__api__/qms/supplier-tickets":
+            self._send_json(200, {"success": True, "items": QMS_STORE.list_supplier_tickets(self._session_identity())})
+            return True
+        ticket_file = re.fullmatch(r"/__api__/qms/supplier-tickets/([A-Za-z0-9-]+)/files/([A-Za-z0-9-]+)", clean_path)
+        if ticket_file:
+            item = QMS_STORE.get_supplier_ticket_file(self._session_identity(), *ticket_file.groups())
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Length", str(len(item["content"])))
+            self.send_header("Content-Disposition", "attachment; filename*=UTF-8''" + urllib.parse.quote(item["original_name"], safe=""))
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Evidence-SHA256", item["sha256"])
+            self.end_headers()
+            self.wfile.write(item["content"])
+            return True
+        ticket_record = re.fullmatch(r"/__api__/qms/supplier-tickets/([A-Za-z0-9-]+)", clean_path)
+        if ticket_record:
+            self._send_json(200, {"success": True, "record": QMS_STORE.get_supplier_ticket(self._session_identity(), ticket_record.group(1))})
+            return True
         if clean_path == "/__api__/qms/internal-quality":
             identity = self._session_identity()
             self._send_json(200, {"success": True, "items": QMS_STORE.list_internal_quality(identity, (query.get("kind") or ["Issue"])[0])})
@@ -577,20 +597,21 @@ class PortalHandler(SimpleHTTPRequestHandler):
     def _handle_qms_post(self, clean_path: str) -> bool:
         agent_run_action = re.fullmatch(r"/__api__/qms/agent-runs/(\d+)/(confirm|approve|reject|retry|cancel)", clean_path)
         notice_update = re.fullmatch(r"/__api__/qms/supplier-notices/([A-Za-z0-9-]+)", clean_path)
+        ticket_update = re.fullmatch(r"/__api__/qms/supplier-tickets/([A-Za-z0-9-]+)", clean_path)
         internal_update = re.fullmatch(r"/__api__/qms/internal-quality/([A-Za-z0-9-]+)", clean_path)
         evidence_upload = re.fullmatch(r"/__api__/qms/cases/([^/]+)/evidence", clean_path)
         case_source_action = re.fullmatch(r"/__api__/qms/cases/([^/]+)/sources", clean_path)
         finding_action = re.fullmatch(r"/__api__/qms/quality-findings/(\d+)/resolve", clean_path)
         qms_paths = {
             "/__api__/auth/login", "/__api__/auth/logout", "/__api__/auth/change-password",
-            "/__api__/qms/supplier-notices", "/__api__/qms/internal-quality", "/__api__/qms/state", "/__api__/qms/stage-version", "/__api__/qms/approval",
+            "/__api__/qms/supplier-notices", "/__api__/qms/supplier-tickets", "/__api__/qms/internal-quality", "/__api__/qms/state", "/__api__/qms/stage-version", "/__api__/qms/approval",
             "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/escalations/evaluate",
             "/__api__/qms/agent-runs", "/__api__/qms/scheduler/evaluate",
         }
-        if clean_path not in qms_paths and not agent_run_action and not case_source_action and not finding_action and not evidence_upload and not internal_update and not notice_update:
+        if clean_path not in qms_paths and not agent_run_action and not case_source_action and not finding_action and not evidence_upload and not internal_update and not notice_update and not ticket_update:
             return False
         self._validate_local_origin()
-        params = self._read_json_body(44 * 1024 * 1024 if evidence_upload or internal_update or notice_update or clean_path in {"/__api__/qms/internal-quality", "/__api__/qms/supplier-notices"} else 32 * 1024 * 1024)
+        params = self._read_json_body(44 * 1024 * 1024 if evidence_upload or internal_update or notice_update or ticket_update or clean_path in {"/__api__/qms/internal-quality", "/__api__/qms/supplier-notices", "/__api__/qms/supplier-tickets"} else 32 * 1024 * 1024)
         if clean_path == "/__api__/auth/login":
             user, raw_token, csrf = QMS_STORE.authenticate(str(params.get("username", "")), str(params.get("password", "")))
             cookie = f"{AUTH_COOKIE_NAME}={urllib.parse.quote(raw_token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=28800"
@@ -603,6 +624,12 @@ class PortalHandler(SimpleHTTPRequestHandler):
             return True
         if notice_update:
             self._send_json(200, {"success": True, "record": QMS_STORE.update_supplier_notice(identity, notice_update.group(1), params)})
+            return True
+        if clean_path == "/__api__/qms/supplier-tickets":
+            self._send_json(201, {"success": True, "record": QMS_STORE.create_supplier_ticket(identity, params)})
+            return True
+        if ticket_update:
+            self._send_json(200, {"success": True, "record": QMS_STORE.update_supplier_ticket(identity, ticket_update.group(1), params)})
             return True
         if clean_path == "/__api__/qms/internal-quality":
             self._send_json(201, {"success": True, "record": QMS_STORE.create_internal_quality(identity, params)})

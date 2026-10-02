@@ -101,9 +101,10 @@ class SessionIdentity:
 
 from internal_quality import InternalQualityMixin
 from supplier_notices import SupplierNoticesMixin
+from supplier_tickets import SupplierTicketsMixin
 
 
-class QMSStore(InternalQualityMixin, SupplierNoticesMixin):
+class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin):
     """Thread-safe SQLite store used by the local portal server."""
 
     def __init__(self, project_root: Path):
@@ -297,6 +298,7 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin):
             )
             self._init_internal_quality(db)
             self._init_supplier_notices(db)
+            self._init_supplier_tickets(db)
             self._seed_users(db)
 
     def _seed_users(self, db: sqlite3.Connection) -> None:

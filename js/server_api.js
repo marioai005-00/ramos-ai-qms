@@ -108,6 +108,8 @@
     const payload = await request('/__api__/qms/state');
     const record = payload.record;
     if (!record) {
+      // Supplier accounts cannot write Case state, so they never seed the first central record.
+      if (state.user?.isSupplier) return { ...localData, cases: [], intakeQueue: [], _centralRevision: 0, _centralMode: true };
       const initial = businessState(localData);
       const saved = await request('/__api__/qms/state', {
         method: 'POST',
