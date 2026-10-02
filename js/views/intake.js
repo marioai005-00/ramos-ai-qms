@@ -662,6 +662,11 @@
           </div>
           <div class="triage-original-evidence">${intakeEvidenceLinks(item.evidenceList)}</div>
           ${renderTriageDecisionResult(item)}
+          ${typeof canDeleteQmsRecords === 'function' && canDeleteQmsRecords() ? `
+            <div class="triage-actions" style="justify-content:flex-end;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="deleteQmsRecord('intake','${item.intakeId}')" title="시스템 관리자 전용 · 사유와 함께 서버에 보관됩니다"><i data-lucide="trash-2" style="width:13px;height:13px;"></i> 접수 삭제</button>
+            </div>
+          ` : ''}
           ${canReview ? `
             ${item.status === 'Quality Review Pending' ? `
               <div class="triage-actions">

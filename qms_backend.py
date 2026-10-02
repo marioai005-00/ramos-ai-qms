@@ -287,6 +287,16 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_audit_target ON audit_logs(target_type, target_id);
+                CREATE TABLE IF NOT EXISTS deleted_records (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    record_type TEXT NOT NULL,
+                    record_id TEXT NOT NULL,
+                    record_json TEXT NOT NULL,
+                    reason TEXT NOT NULL,
+                    deleted_by INTEGER NOT NULL REFERENCES users(id),
+                    deleted_by_username TEXT NOT NULL,
+                    deleted_at TEXT NOT NULL
+                );
                 CREATE INDEX IF NOT EXISTS idx_approval_case ON approval_events(case_id, scope_key);
                 CREATE INDEX IF NOT EXISTS idx_stage_version_case ON stage_versions(case_id, stage_key);
                 CREATE INDEX IF NOT EXISTS idx_dispatch_case ON dispatch_outbox(case_id, gate_key);
@@ -549,6 +559,47 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
                     code="APPROVAL_NOT_RECORDED",
                     details={"caseId": claim["caseId"], "scopeType": claim["scopeType"], "scopeKey": claim["scopeKey"], "role": claim["role"]},
                 )
+
+    def delete_record(self, identity: SessionIdentity, payload: dict[str, Any]) -> dict[str, Any]:
+        """Remove an intake or a Case from the working state. The full record is kept in deleted_records."""
+        self._require_role(identity, {"system_admin"})
+        record_type = payload.get("type") if isinstance(payload, dict) else None
+        record_id = payload.get("id") if isinstance(payload, dict) else None
+        reason = payload.get("reason") if isinstance(payload, dict) else None
+        expected = payload.get("expectedRevision") if isinstance(payload, dict) else None
+        if record_type not in {"intake", "case"} or not isinstance(record_id, str) or not record_id:
+            raise QMSApiError(400, "삭제 대상을 확인하세요.", code="INVALID_DELETE")
+        if not isinstance(reason, str) or len(reason.strip()) < 5 or len(reason) > 500:
+            raise QMSApiError(400, "삭제 사유를 5자 이상 입력하세요.", code="DELETE_REASON_REQUIRED")
+        list_key, id_key = ("intakeQueue", "intakeId") if record_type == "intake" else ("cases", "id")
+        with self._lock, self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            previous = db.execute("SELECT * FROM state_store WHERE id=1").fetchone()
+            if not previous:
+                raise QMSApiError(404, "삭제할 기록이 없습니다.", code="RECORD_NOT_FOUND")
+            if isinstance(expected, bool) or not isinstance(expected, int) or expected != previous["revision"]:
+                raise QMSApiError(409, "다른 사용자가 먼저 저장했습니다. 새로고침 후 다시 시도하세요.", code="REVISION_CONFLICT")
+            state = json.loads(previous["state_json"])
+            items = state.get(list_key) or []
+            target = next((item for item in items if isinstance(item, dict) and item.get(id_key) == record_id), None)
+            if target is None:
+                raise QMSApiError(404, "삭제할 기록이 없습니다.", code="RECORD_NOT_FOUND")
+            if record_type == "intake" and any(isinstance(c, dict) and c.get("sourceIntakeId") == record_id for c in state.get("cases") or []):
+                raise QMSApiError(409, "이 접수로 만든 8D Case가 있습니다. Case를 먼저 삭제하세요.", code="INTAKE_HAS_CASE")
+            state[list_key] = [item for item in items if item is not target]
+            encoded = canonical_json(state)
+            after_hash = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+            revision = previous["revision"] + 1
+            now = utc_now()
+            db.execute("INSERT INTO deleted_records(record_type, record_id, record_json, reason, deleted_by, deleted_by_username, deleted_at) VALUES(?,?,?,?,?,?,?)",
+                       (record_type, record_id, canonical_json(target), reason.strip(), identity.user["id"], identity.user["username"], now))
+            db.execute("UPDATE state_store SET revision=?, state_json=?, state_hash=?, updated_at=?, updated_by=? WHERE id=1",
+                       (revision, encoded, after_hash, now, identity.user["id"]))
+            # Deadlines of a removed record no longer need attention; approval events and stored files stay as they are.
+            db.execute("UPDATE sla_escalations SET status='RESOLVED', resolved_at=? WHERE case_id=? AND status='OPEN'", (now, record_id))
+            self._audit(db, identity.user["id"], identity.user["username"], "RECORD_DELETED", record_type, record_id,
+                        before_hash=previous["state_hash"], after_hash=after_hash, details={"reason": reason.strip()[:500], "revision": revision})
+            return {"revision": revision, "updatedAt": now, "stateHash": after_hash, "type": record_type, "id": record_id}
 
     def upload_case_evidence(self, identity: SessionIdentity, case_id: str, payload: dict) -> dict:
         self._require_role(identity, {"system_admin", "quality_reviewer", "case_facilitator", "stage_drafter", "stage_leader", "stage_champion", "customer_dispatcher"})

@@ -237,6 +237,14 @@
     return payload.draft;
   }
 
+  async function deleteRecord(type, id, reason) {
+    // Pending edits are saved first so the server removes the record from the latest state.
+    await flushSaves();
+    const result = await request('/__api__/qms/records/delete', { method: 'POST', body: { type, id, reason, expectedRevision: state.centralRevision } });
+    state.centralRevision = result.revision;
+    return result;
+  }
+
   async function generateStageDraft(caseId, stage) {
     const payload = await request('/__api__/qms/ai/stage-draft', { method: 'POST', body: { caseId, stage } });
     return payload.draft;
@@ -337,6 +345,7 @@
     prepareDispatch,
     similarCases,
     generateD1D3Draft,
+    deleteRecord,
     generateStageDraft,
     supplierSummary,
     downloadCaseReport,

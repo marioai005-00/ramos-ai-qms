@@ -109,6 +109,7 @@
                 <span style="font-size:0.7rem; color:var(--text-muted);">SLA Due Date:</span>
                 <div class="num-mono" style="font-size:0.78rem; font-weight:700; color:#fbbf24;">${c.dueDateInitial}</div>
               </div>
+              ${typeof canDeleteQmsRecords === 'function' && canDeleteQmsRecords() ? `<button class="btn btn-secondary btn-sm" onclick="deleteQmsRecord('case','${c.id}')" title="시스템 관리자 전용 · 사유와 함께 서버에 보관됩니다"><i data-lucide="trash-2" style="width:13px;height:13px;"></i> Case 삭제</button>` : ''}
               <button class="btn btn-primary btn-sm" style="padding:7px 16px; font-weight:700;" onclick="appData.activeCaseId='${c.id}'; switchStage('${c.currentStage}');">
                 <i data-lucide="external-link" style="width:14px; height:14px;"></i> 8D Workspace 진입
               </button>

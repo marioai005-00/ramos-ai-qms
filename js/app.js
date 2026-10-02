@@ -483,6 +483,39 @@ function renderUserTaskBannerHTML() {
   `;
 }
 
+// Removal is a system administrator action with a stated reason; the server keeps the removed record.
+function canDeleteQmsRecords() {
+  return (CURRENT_USER?.roles || []).includes('system_admin');
+}
+
+async function deleteQmsRecord(type, id) {
+  if (!canDeleteQmsRecords()) { alert('삭제는 시스템 관리자만 할 수 있습니다.'); return; }
+  const label = type === 'intake' ? '접수' : '8D Case';
+  const reason = prompt(`${label} [${id}]을(를) 삭제합니다.\n목록에서 사라지며, 삭제된 내용과 사유는 서버에 보관됩니다.\n\n삭제 사유를 입력해 주세요 (5자 이상):`);
+  if (reason === null) return;
+  if (reason.trim().length < 5) { alert('삭제 사유를 5자 이상 입력해 주세요.'); return; }
+  try {
+    if (typeof persistCurrentEditor === 'function' && !persistCurrentEditor()) return;
+    saveAppData();
+    const result = await QMSApi.deleteRecord(type, id, reason.trim());
+    if (type === 'intake') {
+      appData.intakeQueue = (appData.intakeQueue || []).filter(item => item.intakeId !== id);
+      if (appData.activeIntakeId === id) appData.activeIntakeId = null;
+    } else {
+      appData.cases = (appData.cases || []).filter(item => item.id !== id);
+      if (appData.activeCaseId === id) appData.activeCaseId = appData.cases[0]?.id || null;
+    }
+    appData._centralRevision = result.revision;
+    // Local copy only: the server already holds this state, so no central save is queued.
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); } catch (_) {}
+    if (typeof renderCaseSelector === 'function') renderCaseSelector();
+    renderCurrentView();
+    alert(`${label} [${id}]을(를) 삭제했습니다.`);
+  } catch (error) {
+    alert(`삭제하지 못했습니다. ${error.message}`);
+  }
+}
+
 function jumpToUserTask(caseId, targetStage, gateKey) {
   if (targetStage === 'intake-triage') {
     appData.activeIntakeId = caseId;
