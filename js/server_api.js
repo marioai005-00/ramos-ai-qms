@@ -245,6 +245,11 @@
     return result;
   }
 
+  async function d4ToolAdvice(caseId) {
+    const payload = await request('/__api__/qms/ai/d4-tool-advice', { method: 'POST', body: { caseId } });
+    return payload.advice;
+  }
+
   async function generateStageDraft(caseId, stage) {
     const payload = await request('/__api__/qms/ai/stage-draft', { method: 'POST', body: { caseId, stage } });
     return payload.draft;
@@ -347,6 +352,7 @@
     generateD1D3Draft,
     deleteRecord,
     generateStageDraft,
+    d4ToolAdvice,
     supplierSummary,
     downloadCaseReport,
     evaluateEscalations,

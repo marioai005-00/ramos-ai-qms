@@ -29,6 +29,7 @@ import urllib.parse
 
 from agent_runtime import AgentRuntime
 from qms_backend import QMSApiError, QMSStore
+import tool_advisor
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 HOST = "127.0.0.1"
@@ -272,7 +273,7 @@ def load_env() -> dict[str, str]:
     return env_vars
 
 
-def call_groq(prompt: str, system_prompt: str = "", model: str = "openai/gpt-oss-20b") -> dict[str, object]:
+def call_groq(prompt: str, system_prompt: str = "", model: str = "openai/gpt-oss-20b", max_tokens: int = 3072) -> dict[str, object]:
     env = load_env()
     api_key = env.get("GROQ_API_KEY", "")
     if not api_key:
@@ -287,7 +288,7 @@ def call_groq(prompt: str, system_prompt: str = "", model: str = "openai/gpt-oss
         "model": model,
         "messages": messages,
         "temperature": 0.2,
-        "max_tokens": 3072
+        "max_tokens": max_tokens
     }).encode("utf-8")
 
     req = urllib.request.Request(
@@ -317,7 +318,7 @@ def call_groq(prompt: str, system_prompt: str = "", model: str = "openai/gpt-oss
         return {"success": False, "engine": "groq", "error": str(err)}
 
 
-def call_gemini(prompt: str, system_prompt: str = "", image_base64: str = "", model: str = "", attachments: list | None = None) -> dict[str, object]:
+def call_gemini(prompt: str, system_prompt: str = "", image_base64: str = "", model: str = "", attachments: list | None = None, max_tokens: int = 3072) -> dict[str, object]:
     env = load_env()
     api_key = env.get("GEMINI_API_KEY", "")
     if not api_key:
@@ -352,7 +353,7 @@ def call_gemini(prompt: str, system_prompt: str = "", image_base64: str = "", mo
         "contents": [{"parts": parts}],
         "generationConfig": {
             "temperature": 0.2,
-            "maxOutputTokens": 3072
+            "maxOutputTokens": max_tokens
         }
     }).encode("utf-8")
 
@@ -390,6 +391,25 @@ def call_gemini(prompt: str, system_prompt: str = "", image_base64: str = "", mo
             continue
 
     return {"success": False, "engine": "gemini", "error": last_err or "Unknown Gemini error"}
+
+
+def advise_d4_tools(identity, params: dict) -> dict:
+    """Ask an external AI which D4 analysis tools fit the centrally saved Case. The reply is validated before use."""
+    case, revision = QMS_STORE.d4_tool_advice_case(identity, params)
+    prompt, errors = tool_advisor.build_prompt(case), []
+    for name, call in (("Gemini", lambda: call_gemini(prompt, tool_advisor.SYSTEM_PROMPT, max_tokens=6000)),
+                       ("Groq", lambda: call_groq(prompt, tool_advisor.SYSTEM_PROMPT, max_tokens=6000))):
+        result = call()
+        if not result.get("success"):
+            errors.append(f"{name}: {result.get('error')}")
+            continue
+        try:
+            advice = tool_advisor.parse_advice(str(result.get("text", "")))
+        except ValueError as error:  # includes a reply that is not valid JSON
+            errors.append(f"{name}: {error}")
+            continue
+        return QMS_STORE.record_d4_tool_advice(identity, case["id"], revision, result, advice)
+    raise QMSApiError(502, "외부 AI에서 사용할 수 있는 추천을 받지 못했습니다. " + " / ".join(errors), code="AI_UNAVAILABLE")
 
 
 class PortalHandler(SimpleHTTPRequestHandler):
@@ -640,7 +660,7 @@ class PortalHandler(SimpleHTTPRequestHandler):
         qms_paths = {
             "/__api__/auth/login", "/__api__/auth/logout", "/__api__/auth/change-password",
             "/__api__/qms/supplier-notices", "/__api__/qms/supplier-tickets", "/__api__/qms/assembly-defects", "/__api__/qms/internal-quality", "/__api__/qms/state", "/__api__/qms/stage-version", "/__api__/qms/approval",
-            "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/ai/stage-draft", "/__api__/qms/records/delete", "/__api__/qms/mail/test", "/__api__/qms/escalations/evaluate",
+            "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/ai/stage-draft", "/__api__/qms/ai/d4-tool-advice", "/__api__/qms/records/delete", "/__api__/qms/mail/test", "/__api__/qms/escalations/evaluate",
             "/__api__/qms/agent-runs", "/__api__/qms/scheduler/evaluate",
         }
         if clean_path not in qms_paths and not agent_run_action and not case_source_action and not finding_action and not evidence_upload and not internal_update and not notice_update and not ticket_update and not assembly_update:
@@ -734,6 +754,8 @@ class PortalHandler(SimpleHTTPRequestHandler):
             self._send_json(200, {"success": True, **QMS_STORE.send_test_mail(identity)})
         elif clean_path == "/__api__/qms/records/delete":
             self._send_json(200, {"success": True, **QMS_STORE.delete_record(identity, params)})
+        elif clean_path == "/__api__/qms/ai/d4-tool-advice":
+            self._send_json(200, {"success": True, "advice": advise_d4_tools(identity, params)})
         elif clean_path == "/__api__/qms/ai/stage-draft":
             self._send_json(200, {"success": True, "draft": QMS_STORE.build_stage_draft(identity, params)})
         elif clean_path == "/__api__/qms/escalations/evaluate":
