@@ -57,7 +57,7 @@
   .org-user-card { align-items:flex-start; }
   .org-user-card :is(div,span) { min-width:0; }
   .org-user-card [style*="text-overflow"], .org-user-card [style*="white-space"] { white-space:normal !important; overflow:visible !important; text-overflow:clip !important; overflow-wrap:anywhere; }
-  .org-avatar { min-width:24px !important; }
+  .org-avatar { min-width:24px !important; white-space:nowrap; line-height:1; box-sizing:content-box; }
   .tree-row { flex-wrap:wrap; }
   #modalContainer { min-width:0; padding:20px !important; }
   #modalContainer .modal-content { width:100% !important; padding:0 !important; max-width:100% !important; min-width:0; }
