@@ -4,7 +4,7 @@ const LATE_STAGE_SCHEMA={
  D5:{title:'영구 시정조치 선정',groups:{candidates:{label:'대책 후보',fields:{id:'대책 ID',causeType:['원인 구분','Occurrence','Escape','System'],title:'대책 내용',rationale:'원인 제거 근거',rootCauseElimination:'제거 효과 / 평가 근거',feasibility:'적용성',costImpact:'비용 영향',riskLevel:'부작용 / 위험',owner:'담당자',due:'목표일',verificationPlan:'사전 검증 방법',evidence:'선정 근거 Evidence',selected:['선정',true]} }},objects:{pcnEcn:{ecnNumber:'ECN 번호',pcnRequired:['PCN 필요 여부','미확인','true','false'],customerApprovalStatus:'고객 승인 상태',evidence:'변경 승인 근거'}}},
  D6:{title:'대책 적용 및 효과 검증',groups:{validationTests:{label:'검증 시험',fields:{id:'시험 ID',actionId:'D5 선정 대책 ID',testName:'시험명',condition:'시험 조건',acceptanceCriteria:'합격 기준',sampleSize:['표본 수','number'],failQty:['불량 수','number'],result:['판정','Pending','PASS','FAIL'],owner:'검증 담당자',completedAt:'시험일',evidence:'실측 결과 Evidence'}}},objects:{implementationDetails:{bomRevision:'BOM Revision',appliedLot:'적용 LOT',startDate:'적용일',productionSite:'적용 장소',evidence:'적용 증거'},beforeAfter:{beforeMetric:'개선 전 지표 / 조건',afterMetric:'개선 후 지표 / 조건',evidence:'비교 근거'},containmentRelease:{decision:['봉쇄 해제','Pending','Released','Retained'],rationale:'해제 / 유지 근거',evidence:'확인 증거'}}},
  D7:{title:'재발방지 및 수평전개',groups:{systemUpdates:{label:'표준 / 시스템 개정',fields:{id:'개정 ID',actionId:'D5 대책 ID',docName:'문서명',docNo:'문서 번호',rev:'Revision',changeContent:'변경 내용',owner:'담당자',due:'목표일',status:['상태','Open','Completed'],evidence:'개정 / 교육 Evidence'}},horizontalDeployment:{label:'수평전개',fields:{id:'전개 ID',actionId:'D5 대책 ID',product:'제품 / 공정',sameRisk:'동일 위험 평가',action:'전개 조치',owner:'담당자',status:['상태','Open','Completed','Not Applicable'],evidence:'실행 / 해당 없음 근거'}}},objects:{}},
- D8:{title:'종결 및 팀 인정',groups:{checklist:{label:'종결 점검',fields:{cat:'구분',item:'점검 항목',evidence:'종결 근거',checked:['확인',true]}}},objects:{closure:{remainingRisk:'잔여 위험 및 처리 근거',customerAcceptance:'고객 수락 / 종결 요건',evidence:'고객 확인 및 종결 증거'}},scalars:{teamAppreciation:'팀 기여 및 인정'}}
+ D8:{title:'종결 및 팀 인정',groups:{checklist:{label:'종결 점검',fields:{cat:'구분',item:'점검 항목',evidence:'종결 근거',checked:['확인',true]}}},objects:{closure:{remainingRisk:'잔여 위험 및 처리 근거',customerAcceptance:'고객 요구사항·수락 (해당 시, 종결 조건 아님)',evidence:'종결 근거 (8D Report 결재 기준)'}},scalars:{teamAppreciation:'팀 기여 및 인정'}}
 };
 function ensureLateStages(c){
  for(const [stage,spec] of Object.entries(LATE_STAGE_SCHEMA)){
@@ -12,7 +12,7 @@ function ensureLateStages(c){
   for(const group of Object.keys(spec.groups)){d[group] ||= [];if(group!=='checklist')d[group].forEach((r,i)=>{r.id ||= `${stage}-${group}-${i+1}`;});}
   for(const key of Object.keys(spec.objects))d[key] ||= {};
  }
- if(!c.d8.checklist.length)c.d8.checklist=['D1~D4 문제·원인 증거','D5~D6 조치·검증·봉쇄 결정','D7 재발방지·수평전개','고객 종결 요건','잔여 위험 검토'].map(item=>({cat:'Closure',item,evidence:'',checked:false}));
+ if(!c.d8.checklist.length)c.d8.checklist=['D1~D4 문제·원인 증거','D5~D6 조치·검증·봉쇄 결정','D7 재발방지·수평전개','고객 보고 필요 여부·송부 계획 (종결 조건 아님)','잔여 위험 검토'].map(item=>({cat:'Closure',item,evidence:'',checked:false}));
  c.d5.pcnEcn={ecnNumber:'',pcnRequired:null,customerApprovalStatus:'미확인',...c.d5.pcnEcn};
 }
 function lateField(path,definition,value){
@@ -36,6 +36,7 @@ function renderLateStageWorkspace(c,stage){
  ${stage === 'D5' && typeof renderD5ActionAdvicePanel === 'function' ? renderD5ActionAdvicePanel(c) : ''}
  ${stage === 'D6' && typeof renderD6AssistantPanel === 'function' ? renderD6AssistantPanel(c) : ''}
  ${stage === 'D7' && typeof renderD7AssistantPanel === 'function' ? renderD7AssistantPanel(c) : ''}
+ ${stage === 'D8' && typeof renderD8AssistantPanel === 'function' ? renderD8AssistantPanel(c) : ''}
   ${Object.entries(spec.groups).map(([group,g])=>`<div class="card"><h3>${g.label}</h3>${d[group].map((r,i)=>`<div class="card"><div class="grid-3">${Object.entries(g.fields).map(([k,f])=>lateField(`${group}.${i}.${k}`,f,r[k])).join('')}</div><button type="button" class="btn btn-secondary btn-sm" onclick="editLateRow('${stage}','${group}',${i})">행 삭제</button></div>`).join('')}<button type="button" class="btn btn-secondary" onclick="editLateRow('${stage}','${group}')">행 추가</button></div>`).join('')}
  ${Object.entries(spec.objects).map(([obj,fields])=>`<div class="card"><div class="grid-3">${Object.entries(fields).map(([k,f])=>lateField(`${obj}.${k}`,f,d[obj][k])).join('')}</div></div>`).join('')}
  ${Object.entries(spec.scalars||{}).map(([k,f])=>lateField(k,f,d[k])).join('')}
@@ -72,7 +73,8 @@ function lateStageReviewError(c,stage){
  }
  if(stage==='D8'){
   if(!d.checklist?.length||d.checklist.some(r=>!text(r.item)||!text(r.evidence)||r.checked!==true))return '모든 종결 점검 항목과 증거를 확인하세요.';
-  if(!['remainingRisk','customerAcceptance','evidence'].every(k=>text(d.closure?.[k])))return '잔여 위험·고객 종결 요건·증거를 기록하세요.';
+  // Customer dispatch is not a closure condition (user decision 2026-10-03): the drafter, leader and champion approving the 8D report closes the Case.
+  if(!['remainingRisk','evidence'].every(k=>text(d.closure?.[k])))return '잔여 위험과 종결 근거를 기록하세요.';
  }
  return '';
 }

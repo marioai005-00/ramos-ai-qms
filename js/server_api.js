@@ -249,6 +249,22 @@
     return result;
   }
 
+  async function d8Readiness(caseId) {
+    return await request('/__api__/qms/d8/readiness', { method: 'POST', body: { caseId } });
+  }
+
+  async function d8MonitoringPlan(caseId, days) {
+    return (await request('/__api__/qms/d8/monitoring-plan', { method: 'POST', body: { caseId, days } })).plan;
+  }
+
+  async function d8Review(caseId) {
+    return (await request('/__api__/qms/ai/d8-review', { method: 'POST', body: { caseId } })).review;
+  }
+
+  async function d8Draft(caseId, english) {
+    return (await request('/__api__/qms/ai/d8-draft', { method: 'POST', body: { caseId, english } })).draft;
+  }
+
   async function d7SystemAdvice(caseId) {
     return (await request('/__api__/qms/ai/d7-system-advice', { method: 'POST', body: { caseId } })).advice;
   }
@@ -404,6 +420,10 @@
     d7DeploymentAdvice,
     d7Lessons,
     d7Checks,
+    d8Readiness,
+    d8MonitoringPlan,
+    d8Review,
+    d8Draft,
     supplierSummary,
     downloadCaseReport,
     evaluateEscalations,

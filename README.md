@@ -50,6 +50,7 @@ Copy-Item .env.example .env
 | `tool_advisor.py` | D4 AI 품질도구 추천 |
 | `action_advisor.py` | D5 AI 대책 후보 추천 |
 | `prevention_advisor.py` | D7 재발방지·수평전개 도우미 |
+| `closure_advisor.py` | D8 종결 도우미(준비 점검·일관성 검토·종결 초안·재발 모니터링) |
 | `validation_advisor.py`, `validation_stats.py` | D6 검증 도우미(시험 계획·성적서 읽기·점검), 시료 수·전후 비교 공식 |
 | `stage_drafts.py` | D4~D8 근거 기반 초안 |
 | `report_export.py` | 8D 보고서 Excel 생성 |

@@ -164,3 +164,11 @@ def sla_html(item: dict, record: dict | None, now: datetime, test_notice: str = 
 def test_html(lines: list[tuple[str, str]], test_notice: str = "") -> str:
     return page(tone="neutral", badge="메일 발송 시험", title="메일이 정상적으로 도착했습니다",
                 lead="RAMOS AI-QMS 8D 알림 메일의 발송 경로를 확인하기 위한 시험 메일입니다.", blocks=[facts_table(lines)], test_notice=test_notice)
+
+
+def monitoring_html(case: dict, item: dict, test_notice: str = "") -> str:
+    return page(tone="info", badge=f"종결 후 {item.get('days')}일 재발 확인", title=str(case.get("id")),
+                lead="종결된 8D Case의 재발 확인 기한이 되었습니다. 같은 불량이 다시 접수됐는지 확인하고 결과를 기록해 주세요.",
+                blocks=[tiles([{"label": "확인 기한", "value": str(item.get("dueDate")), "note": f"종결 후 {item.get('days')}일", "tone": "info"}]),
+                        section_title("Case 기록"), facts_table(record_facts(case))],
+                test_notice=test_notice)

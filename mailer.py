@@ -16,7 +16,7 @@ from email.utils import formatdate, make_msgid
 from pathlib import Path
 
 from internal_quality import fail, now
-from mail_templates import case_share_html, sla_html, test_html
+from mail_templates import case_share_html, monitoring_html, sla_html, test_html
 
 SEND_ROLES = {"system_admin", "quality_reviewer"}
 DEFAULT_TEST_RECIPIENT = "sjkim@ramostek.com"
@@ -227,3 +227,17 @@ class MailerMixin:
             ref = f"{case.get('id')}:{hashlib.sha256(','.join(emails).encode('utf-8')).hexdigest()[:16]}"
             self.send_mail(actor, "CASE_SHARE", ref, f"[부적합 공유] {case.get('id')} {field('customer')} {field('claimTitle')}", body, emails, once=True,
                            html=lambda notice, case=case: case_share_html(case, notice))
+
+    def _mail_monitoring_due(self, state: dict) -> None:
+        """Remind the Case team when a post-closure recurrence check falls due. One mail per check."""
+        today = datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d")
+        for case in state.get("cases") or []:
+            plan = case.get("postClosureMonitoring") if isinstance(case, dict) else None
+            for item in (plan.get("items") if isinstance(plan, dict) and isinstance(plan.get("items"), list) else []):
+                if not isinstance(item, dict) or item.get("status") != "Open" or str(item.get("dueDate", "9999")) > today:
+                    continue
+                body = (f"8D Case {case.get('id')}의 종결 후 {item.get('days')}일 재발 확인 기한({item.get('dueDate')})이 되었습니다.\n\n"
+                        f"- 고객사: {case.get('customer') or '미입력'}\n- 제품: {case.get('product') or '미입력'}\n- 불량 현상: {case.get('claimTitle') or '미입력'}\n\n"
+                        "같은 불량이 다시 접수됐는지 확인하고 D8 화면의 재발 모니터링에 결과를 기록해 주세요. 이 메일은 시스템이 자동으로 보냈습니다.")
+                self.send_mail("scheduler", "MONITOR", f"{case.get('id')}:{item.get('id')}", f"[재발 확인] {case.get('id')} 종결 후 {item.get('days')}일", body,
+                               self._team_emails(case), once=True, html=lambda notice, case=case, item=item: monitoring_html(case, item, notice))

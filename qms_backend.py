@@ -110,9 +110,10 @@ from tool_advisor import ToolAdvisorMixin
 from action_advisor import ActionAdvisorMixin
 from validation_advisor import ValidationAdvisorMixin
 from prevention_advisor import PreventionAdvisorMixin
+from closure_advisor import ClosureAdvisorMixin
 
 
-class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin, SupplierSummaryMixin, AssemblyDefectsMixin, StageDraftMixin, ToolAdvisorMixin, ActionAdvisorMixin, ValidationAdvisorMixin, PreventionAdvisorMixin, ReportExportMixin, MailerMixin):
+class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin, SupplierSummaryMixin, AssemblyDefectsMixin, StageDraftMixin, ToolAdvisorMixin, ActionAdvisorMixin, ValidationAdvisorMixin, PreventionAdvisorMixin, ClosureAdvisorMixin, ReportExportMixin, MailerMixin):
     """Thread-safe SQLite store used by the local portal server."""
 
     def __init__(self, project_root: Path):
@@ -972,6 +973,7 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
         records = {str(c.get("id")): c for c in record["state"].get("cases", []) if isinstance(c, dict)}
         records.update({str(i.get("intakeId")): i for i in record["state"].get("intakeQueue", []) if isinstance(i, dict)})
         self._mail_sla_escalations(result, created_ids, team_emails, records)
+        self._mail_monitoring_due(record["state"])
         return result
 
 

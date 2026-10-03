@@ -32,6 +32,7 @@ from qms_backend import QMSApiError, QMSStore
 import action_advisor
 import validation_advisor
 import prevention_advisor
+import closure_advisor
 import validation_stats
 import tool_advisor
 
@@ -515,6 +516,24 @@ def advise_d7_lessons(identity, params: dict) -> dict:
     return _d7_result(prevention_advisor.LESSONS_ENGINE, case, revision, provider, lessons)
 
 
+def review_d8_consistency(identity, params: dict) -> dict:
+    case, revision = QMS_STORE._d8_case(identity, params)
+    provider, review = ask_ai_for_advice(closure_advisor.build_review_prompt(case), closure_advisor.REVIEW_PROMPT, closure_advisor.parse_review)
+    QMS_STORE.record_d8_ai(identity, "D8_CONSISTENCY_REVIEWED", case["id"], revision, provider, {"findings": len(review["findings"])})
+    return {"caseId": case["id"], "engine": closure_advisor.REVIEW_ENGINE, "provider": provider.get("engine"), "model": provider.get("model"),
+            "generatedAt": closure_advisor.now(), "caseRevision": revision, **review}
+
+
+def draft_d8_closure(identity, params: dict) -> dict:
+    case, revision = QMS_STORE._d8_case(identity, params)
+    english = params.get("english") is True
+    provider, draft = ask_ai_for_advice(closure_advisor.build_draft_prompt(case, english), closure_advisor.DRAFT_PROMPT,
+                                        lambda text: closure_advisor.parse_draft(text, english))
+    QMS_STORE.record_d8_ai(identity, "D8_CLOSURE_DRAFTED", case["id"], revision, provider, {"english": english})
+    return {"caseId": case["id"], "engine": closure_advisor.DRAFT_ENGINE, "provider": provider.get("engine"), "model": provider.get("model"),
+            "generatedAt": closure_advisor.now(), "caseRevision": revision, **draft}
+
+
 class PortalHandler(SimpleHTTPRequestHandler):
     def _send_json(self, status: int, value: object, *, cookies: list[str] | None = None) -> None:
         body = json.dumps(value, ensure_ascii=False).encode("utf-8")
@@ -763,7 +782,7 @@ class PortalHandler(SimpleHTTPRequestHandler):
         qms_paths = {
             "/__api__/auth/login", "/__api__/auth/logout", "/__api__/auth/change-password",
             "/__api__/qms/supplier-notices", "/__api__/qms/supplier-tickets", "/__api__/qms/assembly-defects", "/__api__/qms/internal-quality", "/__api__/qms/state", "/__api__/qms/stage-version", "/__api__/qms/approval",
-            "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/ai/stage-draft", "/__api__/qms/ai/d4-tool-advice", "/__api__/qms/ai/d5-action-advice", "/__api__/qms/ai/d6-test-plan", "/__api__/qms/ai/d6-read-report", "/__api__/qms/d6/statistics", "/__api__/qms/d6/checks", "/__api__/qms/ai/d7-system-advice", "/__api__/qms/ai/d7-deployment-advice", "/__api__/qms/ai/d7-lessons", "/__api__/qms/d7/checks", "/__api__/qms/records/delete", "/__api__/qms/mail/test", "/__api__/qms/escalations/evaluate",
+            "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/ai/stage-draft", "/__api__/qms/ai/d4-tool-advice", "/__api__/qms/ai/d5-action-advice", "/__api__/qms/ai/d6-test-plan", "/__api__/qms/ai/d6-read-report", "/__api__/qms/d6/statistics", "/__api__/qms/d6/checks", "/__api__/qms/ai/d7-system-advice", "/__api__/qms/ai/d7-deployment-advice", "/__api__/qms/ai/d7-lessons", "/__api__/qms/d7/checks", "/__api__/qms/d8/readiness", "/__api__/qms/d8/monitoring-plan", "/__api__/qms/ai/d8-review", "/__api__/qms/ai/d8-draft", "/__api__/qms/records/delete", "/__api__/qms/mail/test", "/__api__/qms/escalations/evaluate",
             "/__api__/qms/agent-runs", "/__api__/qms/scheduler/evaluate",
         }
         if clean_path not in qms_paths and not agent_run_action and not case_source_action and not finding_action and not evidence_upload and not internal_update and not notice_update and not ticket_update and not assembly_update:
@@ -857,6 +876,14 @@ class PortalHandler(SimpleHTTPRequestHandler):
             self._send_json(200, {"success": True, **QMS_STORE.send_test_mail(identity)})
         elif clean_path == "/__api__/qms/records/delete":
             self._send_json(200, {"success": True, **QMS_STORE.delete_record(identity, params)})
+        elif clean_path == "/__api__/qms/d8/readiness":
+            self._send_json(200, {"success": True, **QMS_STORE.d8_readiness(identity, params)})
+        elif clean_path == "/__api__/qms/d8/monitoring-plan":
+            self._send_json(200, {"success": True, "plan": QMS_STORE.d8_monitoring_plan(identity, params)})
+        elif clean_path == "/__api__/qms/ai/d8-review":
+            self._send_json(200, {"success": True, "review": review_d8_consistency(identity, params)})
+        elif clean_path == "/__api__/qms/ai/d8-draft":
+            self._send_json(200, {"success": True, "draft": draft_d8_closure(identity, params)})
         elif clean_path == "/__api__/qms/ai/d7-system-advice":
             self._send_json(200, {"success": True, "advice": advise_d7_system(identity, params)})
         elif clean_path == "/__api__/qms/ai/d7-deployment-advice":

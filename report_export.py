@@ -194,7 +194,7 @@ def build_report_workbook(case: dict[str, Any], gate_key: str, exported_by: str)
         section("D8", "종결 및 팀 인정")
         s.table(["구분", "점검 항목", "종결 근거", "확인"], [[_v(r, "cat"), _v(r, "item"), _v(r, "evidence"), bool(r.get("checked"))] for r in _rows(d8.get("checklist"))], "등록된 점검 항목 없음")
         closure = _d(d8.get("closure"))
-        s.pairs([("잔여 위험", _v(closure, "remainingRisk")), ("고객 수락 / 종결 요건", _v(closure, "customerAcceptance")), ("종결 증거", _v(closure, "evidence")), ("팀 기여 및 인정", _v(d8, "teamAppreciation"))])
+        s.pairs([("잔여 위험", _v(closure, "remainingRisk")), ("고객 요구사항·수락 (해당 시)", _v(closure, "customerAcceptance")), ("종결 근거", _v(closure, "evidence")), ("팀 기여 및 인정", _v(d8, "teamAppreciation"))])
 
     stages = [f"D{i}" for i in range(1, last + 1)]
     e = Sheet("Evidence", [26, 34, 18, 16, 14, 66, 28, 22])

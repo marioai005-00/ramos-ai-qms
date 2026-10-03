@@ -228,7 +228,8 @@ def _d8(case, tickets, similar, out):
     if release not in {"Released", "Retained"}:
         out["missingInformation"].append("D3 봉쇄의 해제 또는 유지 결정이 기록되지 않았습니다.")
     closure = _d(_d(case.get("d8")).get("closure"))
-    for key, label in (("remainingRisk", "잔여 위험"), ("customerAcceptance", "고객 수락·종결 요건"), ("evidence", "고객 확인 증거")):
+    # Customer dispatch and acceptance are not closure conditions (user decision 2026-10-03).
+    for key, label in (("remainingRisk", "잔여 위험"), ("evidence", "종결 근거")):
         if not _s(closure.get(key)):
             out["missingInformation"].append(f"{label}이 기록되지 않았습니다.")
     open_tickets = [t["ticketId"] for t in tickets if t.get("status") not in {"Approved", "Rejected"}]
