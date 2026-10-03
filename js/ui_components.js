@@ -13,6 +13,18 @@ function renderQmsEmpty({ title, description = '', icon = 'inbox', compact = fal
 }
 // Timestamps shown and compared as local time are written as local time ("YYYY-MM-DD HH:MM").
 // Writing the UTC clock here made every deadline start nine hours early in Korea.
+// Shows a stored time in local time. Stored ISO times (with a zone) are converted; local strings pass through.
+function qmsDisplayTime(value) {
+  if (!value) return '';
+  const text = String(value);
+  if (!/T\d{2}:\d{2}/.test(text)) return text;
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? text : qmsLocalTimestamp(date);
+}
+// IDs carry the local date, so a Case opened before 09:00 KST is not numbered with the previous day.
+function qmsLocalDateCode(date = new Date()) {
+  return qmsLocalTimestamp(date).slice(0, 10).replace(/-/g, '');
+}
 function qmsLocalTimestamp(date = new Date()) {
   const pad = n => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;

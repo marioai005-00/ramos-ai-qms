@@ -386,7 +386,7 @@ function renderLateStageReport(c,stage){
      <td><b>${esc(key)}</b></td>
      <td><span class="badge ${sign.status==='Approved'?'badge-pass':'badge-wait'}">${esc(sign.status||'Draft')}</span></td>
      <td>${esc(sign.champion?.name||'미승인')}</td>
-     <td><small style="color:#64748b;">${esc(sign.champion?.signedAt||'-')}</small></td>
+     <td><small style="color:#64748b;">${esc(qmsDisplayTime(sign.champion?.signedAt)||'-')}</small></td>
     </tr>`).join('')}
    </tbody>
   </table>`;

@@ -552,7 +552,7 @@
                     <div style="font-size:0.7rem; color:#94a3b8; font-weight:600;">${ap.step}</div>
                     <div style="font-size:0.8rem; font-weight:700; color:var(--text-primary); margin-top:4px;">${ap.approver}</div>
                     <div style="font-size:0.68rem; color:#34d399; margin-top:2px;">✔ ${ap.status}</div>
-                    <div style="font-size:0.65rem; color:var(--text-muted);" class="num-mono">${ap.date}</div>
+                    <div style="font-size:0.65rem; color:var(--text-muted);" class="num-mono">${qmsDisplayTime(ap.date)}</div>
                   </div>
                 `).join('')}
               </div>
@@ -2051,7 +2051,7 @@ function getLotPrefixAndSeq(lotStr = '') {
                 <div class="signoff-person-name">${signOff.drafter ? signOff.drafter.name : (CURRENT_USER.name || '김성중 S.Pro')}</div>
                 <div style="font-size:0.68rem; color:#94a3b8;">${signOff.drafter ? signOff.drafter.dept : (CURRENT_USER.dept || '품질혁신팀')}</div>
                 ${signOff.drafter ? `
-                  <div class="signoff-stamp approved">✍️ 기안 완료<br><small style="font-size:0.6rem;">${signOff.drafter.signedAt}</small></div>
+                  <div class="signoff-stamp approved">✍️ 기안 완료<br><small style="font-size:0.6rem;">${qmsDisplayTime(signOff.drafter.signedAt)}</small></div>
                 ` : `
                   <div class="signoff-stamp draft">작성 중</div>
                 `}
@@ -2062,7 +2062,7 @@ function getLotPrefixAndSeq(lotStr = '') {
                 <div class="signoff-person-name">${escapeWorkspaceValue(leader?.name || "Leader 미지정")}</div>
                 <div style="font-size:0.68rem; color:#94a3b8;">${escapeWorkspaceValue(leader?.dept || "미지정")}</div>
                 ${signOff.leader ? `
-                  <div class="signoff-stamp approved">✔️ 검토 완료<br><small style="font-size:0.6rem;">${signOff.leader.signedAt}</small></div>
+                  <div class="signoff-stamp approved">✔️ 검토 완료<br><small style="font-size:0.6rem;">${qmsDisplayTime(signOff.leader.signedAt)}</small></div>
                 ` : signOff.status === 'Submitted' ? `
                   <div class="signoff-stamp waiting">🟡 Leader 서명 대기</div>
                 ` : `
@@ -2075,7 +2075,7 @@ function getLotPrefixAndSeq(lotStr = '') {
                 <div class="signoff-person-name">${escapeWorkspaceValue(champion?.name || "Champion 미지정")}</div>
                 <div style="font-size:0.68rem; color:#94a3b8;">${escapeWorkspaceValue(champion?.dept || "미지정")}</div>
                 ${signOff.champion ? `
-                  <div class="signoff-stamp approved">🏆 최종 승인 완료<br><small style="font-size:0.6rem;">${signOff.champion.signedAt}</small></div>
+                  <div class="signoff-stamp approved">🏆 최종 승인 완료<br><small style="font-size:0.6rem;">${qmsDisplayTime(signOff.champion.signedAt)}</small></div>
                 ` : signOff.status === 'LeaderApproved' ? `
                   <div class="signoff-stamp waiting">🟡 Champion 서명 대기</div>
                 ` : `

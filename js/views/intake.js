@@ -1017,7 +1017,7 @@
 
     function createCaseFromApprovedIntake(item) {
       const sequence = String((appData.cases || []).length + 1).padStart(3, '0');
-      const caseId = `RAMOS-8D-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${sequence}`;
+      const caseId = `RAMOS-8D-${qmsLocalDateCode()}-${sequence}`;
       const owner = item.intakeRouting?.primaryOwner || {};
       const triage = item.triage || {};
       const now = new Date();
@@ -1118,7 +1118,7 @@
         const item = items[index];
         if (item.kind === 'file') {
           const blob = item.getAsFile();
-          const fileName = `Groupware_Screenshot_${new Date().toISOString().slice(0,10)}_${Date.now()}.png`;
+          const fileName = `Groupware_Screenshot_${qmsLocalTimestamp().slice(0, 10)}_${Date.now()}.png`;
           const fileObj = new File([blob], fileName, { type: blob.type });
           pastedFiles.push(fileObj);
         } else if (item.kind === 'string' && item.type === 'text/plain') {
@@ -1360,7 +1360,7 @@
       const intakeOwner = readSelectedIntakeOwner();
       const submittedAt = qmsLocalTimestamp();
       const queue = appData.intakeQueue || (appData.intakeQueue = []);
-      const intakeId = `RAMOS-INTAKE-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(queue.length + 1).padStart(3, '0')}`;
+      const intakeId = `RAMOS-INTAKE-${qmsLocalDateCode()}-${String(queue.length + 1).padStart(3, '0')}`;
       const lineStop = form.lineStop.value === 'true';
       const safetyRisk = form.safetyRisk.value === 'true';
       const recurrentDefect = form.recurrentDefect.value === 'true';

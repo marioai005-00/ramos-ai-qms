@@ -154,7 +154,7 @@ function renderReportsHubView(c) {
               ${appr.status === 'Approved' ? `
                 <div class="signoff-stamp-box">
                   ✔ ${idx === 3 ? '고객송부 완료 [송부]' : '승인완료 [인]'}<br>
-                  <span style="font-size:9px; font-weight:600;">${appr.date}</span>
+                  <span style="font-size:9px; font-weight:600;">${qmsDisplayTime(appr.date)}</span>
                 </div>
               ` : (idx === 3 && isChampionApproved ? `
                 <div style="border:1px solid #f59e0b; color:#fbbf24; background:rgba(245,158,11,0.1); border-radius:4px; padding:4px 6px; font-size:10.5px; font-weight:800; cursor:pointer;" onclick="dispatchReportToCustomer('${currentGateKey}')">
@@ -253,7 +253,7 @@ function renderReportsHubView(c) {
                   <div style="font-weight:700; font-size:11.5px; color:#1e3a8a;">${a.name}</div>
                   ${a.status === 'Approved' ? `
                     <div style="color:#059669; font-weight:800; font-size:10px; margin-top:4px;">
-                      ✔ ${i === 3 ? '고객송부 완료' : '서명완료'} (${a.date})
+                      ✔ ${i === 3 ? '고객송부 완료' : '서명완료'} (${qmsDisplayTime(a.date)})
                     </div>
                   ` : `
                     <div style="color:#94a3b8; font-size:10px; margin-top:4px;">⏳ 대기</div>

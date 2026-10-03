@@ -34,7 +34,7 @@ function renderStageReportPreview(c, stage) {
     <table class="stage-report-head"><tr><td class="brand"><b>RAMOS</b><small>QUALITY MANAGEMENT SYSTEM</small></td><td><h1>${stage}. ${stageMeta[0]}</h1><p>${stageMeta[1]}</p></td><td><b>Report No.</b><span>${c.id}</span><b>Status</b><span>${c.status}</span></td></tr></table>
     <table class="stage-report-summary"><tr><th>Customer</th><td>${c.customer}</td><th>Product / P.N</th><td>${c.product}<br>${c.partNumber}</td></tr><tr><th>LOT</th><td>${c.lotNumber}</td><th>Failure</th><td>${c.defectQty}/${Number(c.inspectQty||0).toLocaleString()}ea · ${c.ppm} PPM</td></tr><tr><th>Symptom</th><td colspan="3">${c.claimTitle}</td></tr></table>
     ${renderStageReportSection(c,stage)}
-    <footer class="stage-report-foot"><span>Evidence 기반 자동 편집 초안 · AI 판단은 품질 담당자의 승인을 대체하지 않습니다.</span><span>${stage} / ${new Date().toISOString().slice(0,10)}</span></footer>
+    <footer class="stage-report-foot"><span>Evidence 기반 자동 편집 초안 · AI 판단은 품질 담당자의 승인을 대체하지 않습니다.</span><span>${stage} / ${qmsLocalTimestamp().slice(0, 10)}</span></footer>
   </article>${stage==='D4'&&typeof renderD4EvidenceAppendix==='function'?renderD4EvidenceAppendix(c):''}`;
 }
 
