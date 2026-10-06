@@ -2,7 +2,7 @@
 
 | 파일 | 내용 |
 |---|---|
-| RAMOS_AI-QMS_A8_덱_presenter-mode.html | 프로젝트 설명 발표 덱 (29장). 브라우저로 열고 ← → 로 넘긴다. O 전체 보기, S 발표자 모드, F 전체 화면 |
+| RAMOS_AI-QMS_A8_덱_presenter-mode.html | 프로젝트 설명 발표 덱 (30장, 18번째 장이 자동 알림 메일). 브라우저로 열고 ← → 로 넘긴다. O 전체 보기, S 발표자 모드, F 전체 화면 |
 | RAMOS_AI-QMS_B7_덱_open-slide-canvas.html | 프로젝트 설명 요약 덱 (13장) |
 | RAMOS_AI-QMS_C7_문서_experiment-readout.html | 프로젝트 설명 문서 (읽는 자료, 검증 결과 포함) |
 | RAMOS_AI-QMS_사용자_매뉴얼.pptx | 화면을 보며 따라 하는 사용 방법 (접수 → D1~D8 → 종결, 결재, 외주·내부 품질, AI 원칙) |
