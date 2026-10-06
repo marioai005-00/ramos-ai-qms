@@ -25,12 +25,15 @@ import portal_server  # noqa: E402
 
 def main() -> None:
     url = f"http://127.0.0.1:{PORT}/"
+    open_browser = os.environ.get("QMS_DEMO_NO_BROWSER") != "1"  # set to 1 to start the server without a browser tab
     if portal_server.local_port_is_open(PORT):
-        webbrowser.open(url)
+        if open_browser:
+            webbrowser.open(url)
         return
     server = ThreadingHTTPServer(("127.0.0.1", PORT), functools.partial(portal_server.PortalHandler, directory=str(ROOT)))
     print(f"[DEMO] {url}  (DB: data/demo.sqlite3, 메일 꺼짐)")
-    threading.Timer(1.0, webbrowser.open, args=(url,)).start()
+    if open_browser:
+        threading.Timer(1.0, webbrowser.open, args=(url,)).start()
     server.serve_forever()
 
 
