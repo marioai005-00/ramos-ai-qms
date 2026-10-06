@@ -13176,3 +13176,13 @@ html[data-theme="light"] {
 [data-theme="light"] #aiDecisionResultBox [style*="var(--text-muted)"] {
   color: #475569 !important;
 }
+
+/* Company logo. Two transparent files: brand colours for light backgrounds, white letters for dark ones. */
+.brand-logo { display:block; height:22px; width:auto; flex-shrink:0; }
+.brand-logo.on-light { display:none; }
+[data-theme="light"] .brand-logo.on-dark { display:none; }
+[data-theme="light"] .brand-logo.on-light { display:block; }
+.login-brand-logo { display:flex; justify-content:center; margin:0 auto 16px; }
+.login-brand-logo .brand-logo { height:46px; }
+.sidebar-brand-mark { display:flex; flex-direction:column; align-items:flex-start; gap:3px; min-width:0; }
+.sidebar-brand-name { font-size:0.68rem; font-weight:800; line-height:1.1; letter-spacing:0.02em; color:var(--text-muted); white-space:nowrap; }
