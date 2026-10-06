@@ -25,19 +25,28 @@ function escapeD4Evidence(value) {
   return String(value ?? '').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
 
+/* New attachments are stored centrally as Case evidence. This browser store only holds files attached by
+   older versions: it is read, never written or cleared, and nothing in it is uploaded without the user. */
 const D4_FILE_DB='ramos-qms-d4-files-v1';
 const D4_FILE_STORE='evidenceFiles';
 const D4_ALLOWED_EXTENSIONS=['png','jpg','jpeg','webp','gif','bmp','pdf','ppt','pptx','xls','xlsx','doc','docx','csv','txt'];
 let activeD4EvidenceIndex = -1;
 let pendingD4Attachments=[];
-let pendingD4DeletedKeys=[];
-let pendingD4NewKeys=[];
+// Files chosen in the open dialog, by attachment id. They reach the server when the document is saved.
+let pendingD4Files=new Map();
 let d4EvidenceSaving=false;
 let d4AttachmentObjectUrls=[];
 function openD4FileDatabase(){return new Promise((resolve,reject)=>{const request=indexedDB.open(D4_FILE_DB,1);request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains(D4_FILE_STORE))request.result.createObjectStore(D4_FILE_STORE);};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});}
-async function putD4EvidenceFile(key,file){const db=await openD4FileDatabase();return new Promise((resolve,reject)=>{const tx=db.transaction(D4_FILE_STORE,'readwrite');tx.objectStore(D4_FILE_STORE).put(file,key);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
 async function getD4EvidenceFile(key){const db=await openD4FileDatabase();return new Promise((resolve,reject)=>{const request=db.transaction(D4_FILE_STORE,'readonly').objectStore(D4_FILE_STORE).get(key);request.onsuccess=()=>{db.close();resolve(request.result);};request.onerror=()=>{db.close();reject(request.error);};});}
-async function deleteD4EvidenceFile(key){const db=await openD4FileDatabase();return new Promise((resolve,reject)=>{const tx=db.transaction(D4_FILE_STORE,'readwrite');tx.objectStore(D4_FILE_STORE).delete(key);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
+async function loadD4AttachmentBlob(caseId,item){
+  if(pendingD4Files.has(item.id))return pendingD4Files.get(item.id);
+  if(item.serverFileId)return QMSApi.fetchCaseEvidence(caseId,item.serverFileId);
+  return item.storageKey?getD4EvidenceFile(item.storageKey):null;
+}
+function d4AttachmentStorageLabel(item){
+  if(pendingD4Files.has(item.id))return '저장 시 QMS에 보관';
+  return item.serverFileId?'QMS 원본 보관':'이전 방식 · 등록한 PC 브라우저에만 보관';
+}
 function makeD4AttachmentId(){return globalThis.crypto?.randomUUID?.()||`d4-${Date.now()}-${Math.random().toString(16).slice(2)}`;}
 function formatD4FileSize(size){if(size<1024)return `${size} B`;if(size<1048576)return `${(size/1024).toFixed(1)} KB`;return `${(size/1048576).toFixed(1)} MB`;}
 function openD4EvidenceBuilder(index) {
@@ -45,7 +54,7 @@ function openD4EvidenceBuilder(index) {
   const d4=captureD4Form(c); const row=d4.selectedTools[index]; if(!row)return;
   row.artifact=row.artifact||createD4EvidenceArtifact(row.id,row,c);
   row.artifact.attachments=Array.isArray(row.artifact.attachments)?row.artifact.attachments:[];
-  pendingD4Attachments=row.artifact.attachments.map(item=>({...item}));pendingD4DeletedKeys=[];pendingD4NewKeys=[];d4EvidenceSaving=false;
+  pendingD4Attachments=row.artifact.attachments.map(item=>({...item}));pendingD4Files=new Map();d4EvidenceSaving=false;
   activeD4EvidenceIndex=index;
   const schema=getD4EvidenceSchema(row.id); const artifact=row.artifact;
   const modal=document.getElementById('globalModal'); const container=document.getElementById('modalContainer');
@@ -54,7 +63,7 @@ function openD4EvidenceBuilder(index) {
     <div class="d4-evidence-meta"><label>문서번호<input class="form-control" id="d4EvDocNo" value="${escapeD4Evidence(artifact.documentNo)}"></label><label>분석 목적·가설<textarea class="form-control" id="d4EvObjective">${escapeD4Evidence(artifact.objective)}</textarea></label><label>원본 자료 / Evidence ID<textarea class="form-control" id="d4EvSources">${escapeD4Evidence(artifact.sourceEvidence)}</textarea></label></div>
     <div class="d4-evidence-grid-wrap"><table><thead><tr>${schema.columns.map(col=>`<th>${col[1]}</th>`).join('')}<th>관리</th></tr></thead><tbody id="d4EvidenceRows">${artifact.rows.map(item=>renderD4EvidenceBuilderRow(schema,item)).join('')}</tbody></table></div>
     <button type="button" class="btn btn-secondary btn-sm d4-add-evidence-row" onclick="addD4EvidenceBuilderRow()"><i data-lucide="plus"></i> 분석 행 추가</button>
-    <section class="d4-file-evidence-panel"><header><div><span>SOURCE FILE ATTACHMENTS</span><h3>완성된 분석자료 직접 첨부</h3><p>이미지·PDF는 Report 안에 바로 표시됩니다. PPT·Excel·Word는 원본 첨부 카드로 표시되며, 대표 화면 이미지를 함께 넣으면 Report에 같이 나타납니다.</p></div><label class="btn btn-secondary"><i data-lucide="paperclip"></i> 파일 선택<input type="file" multiple hidden accept="image/*,.pdf,.ppt,.pptx,.xls,.xlsx,.doc,.docx,.csv,.txt" onchange="handleD4EvidenceFiles(this.files);this.value=''"/></label></header><div class="d4-file-drop-hint">최대 30MB/파일 · 파일은 이 PC의 브라우저 Evidence 저장소에 보관됩니다.</div><div id="d4AttachmentList" class="d4-attachment-list">${renderD4AttachmentList()}</div></section>
+    <section class="d4-file-evidence-panel"><header><div><span>SOURCE FILE ATTACHMENTS</span><h3>완성된 분석자료 직접 첨부</h3><p>이미지·PDF는 Report 안에 바로 표시됩니다. PPT·Excel·Word는 원본 첨부 카드로 표시되며, 대표 화면 이미지를 함께 넣으면 Report에 같이 나타납니다.</p></div><label class="btn btn-secondary"><i data-lucide="paperclip"></i> 파일 선택<input type="file" multiple hidden accept="image/*,.pdf,.ppt,.pptx,.xls,.xlsx,.doc,.docx,.csv,.txt" onchange="handleD4EvidenceFiles(this.files);this.value=''"/></label></header><div class="d4-file-drop-hint">최대 30MB/파일 · [Evidence 문서 저장]을 누르면 원본이 QMS 서버에 보관되어 다른 PC·다른 사용자도 열 수 있습니다. 첨부에서 빼도 이미 올라간 원본은 Evidence 목록(D4)에 남습니다.</div><div id="d4AttachmentStatus" class="d4-file-drop-hint" role="status" aria-live="polite"></div><div id="d4AttachmentList" class="d4-attachment-list">${renderD4AttachmentList()}</div></section>
     <label class="d4-evidence-conclusion">분석 결론<textarea class="form-control" id="d4EvConclusion">${escapeD4Evidence(artifact.conclusion)}</textarea></label>
     <footer><label class="quality-human-check"><input type="checkbox" id="d4EvConfirmed" ${artifact.humanConfirmed?'checked':''}><span><strong>분석 Evidence 확인</strong> · 직접 작성한 분석 또는 첨부 원본을 검토했으며 이 문서를 D4 근본원인 입증자료로 사용합니다.</span></label><div><button class="btn btn-secondary" onclick="closeD4EvidenceBuilder()">취소</button><button class="btn btn-primary" onclick="saveD4EvidenceArtifact()"><i data-lucide="file-check-2"></i> Evidence 문서 저장</button></div></footer></div>`;
   modal.style.display='flex'; if(window.lucide)lucide.createIcons();
@@ -70,7 +79,7 @@ function renderD4AttachmentList(){
       <span class="d4-file-kind d4-kind-${escapeD4Evidence(item.previewType||'doc')}">${escapeD4Evidence((item.extension||'FILE').toUpperCase())}</span>
       <div>
         <b>${escapeD4Evidence(item.name)}</b>
-        <small>${formatD4FileSize(item.size||0)} · ${item.previewType==='image'?'Report 고해상도 이미지 표시':item.previewType==='pdf'?'Report 공식 PDF 뷰어 내장':'원본 첨부 카드 (다운로드)'}</small>
+        <small>${formatD4FileSize(item.size||0)} · ${item.previewType==='image'?'Report 고해상도 이미지 표시':item.previewType==='pdf'?'Report 공식 PDF 뷰어 내장':'원본 첨부 카드 (다운로드)'} · ${d4AttachmentStorageLabel(item)}</small>
       </div>
       <div class="d4-attach-item-actions">
         <button type="button" class="btn btn-secondary btn-sm" onclick="previewPendingD4Attachment(${index})" title="미리보기"><i data-lucide="eye"></i> 보기</button>
@@ -80,11 +89,12 @@ function renderD4AttachmentList(){
 }
 
 async function previewPendingD4Attachment(index){
+  const c=getActiveCase();
   const item=pendingD4Attachments[index];
-  if(!item)return;
+  if(!c||!item)return;
   try{
-    const blob=await getD4EvidenceFile(item.storageKey);
-    if(!blob){alert('원본 파일을 불러오지 못했습니다.');return;}
+    const blob=await loadD4AttachmentBlob(c.id,item);
+    if(!blob){alert('원본 파일을 불러오지 못했습니다. 이전 방식으로 등록된 파일은 등록한 PC의 브라우저에서만 열립니다.');return;}
     const url=URL.createObjectURL(blob);
     if(item.previewType==='image'){
       openD4ImageLightbox(url, item.name);
@@ -93,64 +103,99 @@ async function previewPendingD4Attachment(index){
     }
   }catch(e){
     console.error(e);
-    alert('파일 미리보기를 열 수 없습니다.');
+    alert(`파일 미리보기를 열 수 없습니다. ${e.message||''}`);
   }
 }
-async function handleD4EvidenceFiles(fileList){
-  const c=getActiveCase();const row=c?.d4?.selectedTools?.[activeD4EvidenceIndex];if(!row)return;
-  for(const file of [...fileList]){const extension=(file.name.split('.').pop()||'').toLowerCase();if(!D4_ALLOWED_EXTENSIONS.includes(extension)){alert(`${file.name}: 지원하지 않는 형식입니다.`);continue;}if(file.size>30*1024*1024){alert(`${file.name}: 파일당 30MB를 초과했습니다.`);continue;}const id=makeD4AttachmentId();const storageKey=`${c.id}__${row.id}__${id}`;try{await putD4EvidenceFile(storageKey,file);pendingD4NewKeys.push(storageKey);pendingD4Attachments.push({id,storageKey,name:file.name,type:file.type||'application/octet-stream',extension,size:file.size,previewType:file.type.startsWith('image/')?'image':extension==='pdf'?'pdf':'document',uploadedBy:CURRENT_USER.name,uploadedAt:qmsLocalTimestamp()});}catch(error){console.error(error);alert(`${file.name}: 브라우저 Evidence 저장소에 보관하지 못했습니다.`);}}
-  document.getElementById('d4AttachmentList').innerHTML=renderD4AttachmentList();if(window.lucide)lucide.createIcons();
+function refreshD4AttachmentList(){
+  const list=document.getElementById('d4AttachmentList');
+  if(list){list.innerHTML=renderD4AttachmentList();if(window.lucide)lucide.createIcons();}
+}
+function handleD4EvidenceFiles(fileList){
+  const c=getActiveCase();const row=c?.d4?.selectedTools?.[activeD4EvidenceIndex];if(!row||d4EvidenceSaving)return;
+  for(const file of [...fileList]){
+    const extension=(file.name.split('.').pop()||'').toLowerCase();
+    if(!D4_ALLOWED_EXTENSIONS.includes(extension)){alert(`${file.name}: 지원하지 않는 형식입니다.`);continue;}
+    if(!file.size||file.size>30*1024*1024){alert(`${file.name}: 빈 파일이거나 파일당 30MB를 초과했습니다.`);continue;}
+    const id=makeD4AttachmentId();
+    // Kept in this dialog only; nothing is stored until the document is saved.
+    pendingD4Files.set(id,file);
+    pendingD4Attachments.push({id,name:file.name,type:file.type||'application/octet-stream',extension,size:file.size,previewType:file.type.startsWith('image/')?'image':extension==='pdf'?'pdf':'document',uploadedBy:CURRENT_USER.name,uploadedAt:qmsLocalTimestamp()});
+  }
+  refreshD4AttachmentList();
 }
 function removePendingD4Attachment(index){
+  if(d4EvidenceSaving)return;
   const [removed]=pendingD4Attachments.splice(index,1);
-  if(removed?.storageKey){
-    const newIndex=pendingD4NewKeys.indexOf(removed.storageKey);
-    if(newIndex>=0){
-      pendingD4NewKeys.splice(newIndex,1);
-      deleteD4EvidenceFile(removed.storageKey).catch(err=>console.warn('Staged D4 file cleanup failed:',err));
-    }else{
-      pendingD4DeletedKeys.push(removed.storageKey);
-    }
-  }
-  document.getElementById('d4AttachmentList').innerHTML=renderD4AttachmentList();if(window.lucide)lucide.createIcons();
+  // Only the link from this analysis document is dropped; stored originals are never deleted here.
+  if(removed)pendingD4Files.delete(removed.id);
+  refreshD4AttachmentList();
 }
-async function closeD4EvidenceBuilder(){
-  if(!d4EvidenceSaving && pendingD4NewKeys.length){
-    const cleanup=await Promise.allSettled(pendingD4NewKeys.map(deleteD4EvidenceFile));
-    cleanup.filter(item=>item.status==='rejected').forEach(item=>console.warn('Cancelled D4 file cleanup failed:',item.reason));
-  }
+function setD4EvidenceBusy(busy,message=''){
+  d4EvidenceSaving=busy;
+  document.querySelectorAll('.d4-evidence-builder button, .d4-evidence-builder input, .d4-evidence-builder textarea').forEach(el=>{el.disabled=busy;});
+  const status=document.getElementById('d4AttachmentStatus');
+  if(status)status.textContent=message;
+}
+function closeD4EvidenceBuilder(){
+  if(d4EvidenceSaving)return;
   document.getElementById('globalModal').style.display='none';
   activeD4EvidenceIndex=-1;
   pendingD4Attachments=[];
-  pendingD4DeletedKeys=[];
-  pendingD4NewKeys=[];
-  d4EvidenceSaving=false;
+  pendingD4Files=new Map();
 }
 async function saveD4EvidenceArtifact(){
-  const c=getActiveCase(); const row=c?.d4?.selectedTools?.[activeD4EvidenceIndex]; if(!row)return;
-  const schema=getD4EvidenceSchema(row.id); const rows=[...document.querySelectorAll('#d4EvidenceRows tr')].map(tr=>({values:schema.columns.map((_,i)=>tr.querySelector(`[data-d4-evidence-cell="${i}"]`)?.value.trim()||'')})).filter(item=>item.values.some(Boolean));
+  if(d4EvidenceSaving)return;
+  const c=getActiveCase(); const index=activeD4EvidenceIndex; let row=c?.d4?.selectedTools?.[index]; if(!row)return;
+  const toolId=row.id;
+  const schema=getD4EvidenceSchema(toolId); const rows=[...document.querySelectorAll('#d4EvidenceRows tr')].map(tr=>({values:schema.columns.map((_,i)=>tr.querySelector(`[data-d4-evidence-cell="${i}"]`)?.value.trim()||'')})).filter(item=>item.values.some(Boolean));
   const objective=document.getElementById('d4EvObjective').value.trim(); const typedSources=document.getElementById('d4EvSources').value.trim(); const sources=typedSources||pendingD4Attachments.map(item=>item.name).join(', '); const conclusion=document.getElementById('d4EvConclusion').value.trim(); const confirmed=document.getElementById('d4EvConfirmed').checked;
+  const documentNo=document.getElementById('d4EvDocNo').value.trim()||`${c.id}-D4-${schema.code}`;
   if(!objective||!conclusion||(!rows.length&&!pendingD4Attachments.length)){alert('분석 목적과 결론을 작성하고, 분석 양식 또는 완성된 분석자료 파일 중 하나를 등록해 주세요.');return;}
   if(confirmed&&rows.some(item=>item.values.some(value=>!value))){alert('사람 확인 전에 각 분석 행의 모든 칸을 작성해 주세요.');return;}
+  const waiting=pendingD4Attachments.filter(item=>pendingD4Files.has(item.id));
+  setD4EvidenceBusy(true,waiting.length?'QMS 원본 저장 준비 중…':'');
+  let uploaded=0;
+  try{
+    if(waiting.length){
+      // The Case has to be on the server as it is on screen before originals are linked to it.
+      saveAppData();
+      await QMSApi.flushSaves();
+      for(const item of waiting){
+        setD4EvidenceBusy(true,`${uploaded+1}/${waiting.length} · ${item.name} QMS 원본 저장 중…`);
+        const result=await QMSApi.uploadCaseEvidence(c.id,pendingD4Files.get(item.id),toolId==='physical-fa'?'FA Analysis':'User evidence',['D4'],`D4 분석 양식 첨부 · ${schema.title}`);
+        // Original, Evidence entry (D4 only) and revision are committed together by the server.
+        Object.assign(c,result.case);
+        Object.assign(item,{serverFileId:result.evidence.id,sha256:result.evidence.sha256,storageLocation:'QMS'});
+        pendingD4Files.delete(item.id);
+        uploaded++;
+      }
+    }
+  }catch(error){
+    console.error(error);
+    if(uploaded){try{saveAppData();}catch(_){/* saveAppData has already told the user */}}
+    setD4EvidenceBusy(false);
+    refreshD4AttachmentList();
+    alert(`${uploaded?`${uploaded}건은 QMS에 보관되어 Evidence 목록(D4)에 등록되었습니다.\n`:''}원본을 QMS에 올리지 못했습니다: ${error.message}\n분석 문서는 아직 저장되지 않았습니다. 확인 후 [Evidence 문서 저장]을 다시 눌러 주세요.`);
+    return;
+  }
+  // Uploading replaces the Case content with the server copy, so the row is looked up again.
+  row=c.d4?.selectedTools?.[index];
+  if(!row||row.id!==toolId){setD4EvidenceBusy(false);alert('D4 도구 목록이 바뀌어 분석 문서를 저장하지 못했습니다. 새로고침 후 다시 작성해 주세요.');return;}
   const previous={hypothesis:row.hypothesis,evidence:row.evidence,finding:row.finding,artifact:row.artifact,approval:c.d4.approval};
-  row.hypothesis=objective;row.evidence=sources;row.finding=conclusion;row.artifact={version:1,documentNo:document.getElementById('d4EvDocNo').value.trim()||`${c.id}-D4-${schema.code}`,objective,sourceEvidence:sources,conclusion,rows,attachments:pendingD4Attachments.map(item=>({...item})),humanConfirmed:confirmed,updatedBy:CURRENT_USER.name,updatedAt:qmsLocalTimestamp()};
+  row.hypothesis=objective;row.evidence=sources;row.finding=conclusion;row.artifact={version:1,documentNo,objective,sourceEvidence:sources,conclusion,rows,attachments:pendingD4Attachments.map(item=>({...item})),humanConfirmed:confirmed,updatedBy:CURRENT_USER.name,updatedAt:qmsLocalTimestamp()};
   c.d4.approval={status:'Draft',humanConfirmed:false};
   try{
     saveAppData();
   }catch(error){
     row.hypothesis=previous.hypothesis;row.evidence=previous.evidence;row.finding=previous.finding;row.artifact=previous.artifact;c.d4.approval=previous.approval;
-    const cleanup=await Promise.allSettled(pendingD4NewKeys.map(deleteD4EvidenceFile));
-    cleanup.filter(item=>item.status==='rejected').forEach(item=>console.warn('Failed D4 save cleanup failed:',item.reason));
-    pendingD4NewKeys=[];
+    setD4EvidenceBusy(false);
+    refreshD4AttachmentList();
     return;
   }
-  const cleanup=await Promise.allSettled([...new Set(pendingD4DeletedKeys)].map(deleteD4EvidenceFile));
-  cleanup.filter(item=>item.status==='rejected').forEach(item=>console.warn('Removed D4 file cleanup failed:',item.reason));
-  d4EvidenceSaving=true;
-  pendingD4NewKeys=[];
-  await closeD4EvidenceBuilder();
+  setD4EvidenceBusy(false);
+  closeD4EvidenceBuilder();
   renderCurrentView();
-  alert(`${schema.title}가 D4 Evidence 문서로 저장되었습니다.`);
+  alert(`${schema.title}가 D4 Evidence 문서로 저장되었습니다.${uploaded?`\n첨부 원본 ${uploaded}건은 QMS에 보관되어 다른 PC에서도 열 수 있습니다.`:''}`);
 }
 
 function renderD4EvidenceAppendix(c) {
@@ -159,9 +204,9 @@ function renderD4EvidenceAppendix(c) {
 }
 function renderD4EvidenceSheet(c,row,index) {
   const schema=getD4EvidenceSchema(row.id); const artifact=row.artifact||createD4EvidenceArtifact(row.id,row,c); const rows=artifact.rows||[];
-  return `<article class="stage-report-paper d4-evidence-paper"><div class="stage-report-watermark">DRAFT · HUMAN APPROVAL REQUIRED</div><div class="d4-evidence-doc-head"><div><b>RAMOS</b><small>D4 ROOT CAUSE EVIDENCE</small></div><div><span>EVIDENCE ${String(index+1).padStart(2,'0')}</span><h2>${escapeD4Evidence(schema.title)}</h2></div><dl><dt>문서번호</dt><dd>${escapeD4Evidence(artifact.documentNo)}</dd><dt>확인상태</dt><dd class="${artifact.humanConfirmed?'ok':'wait'}">${artifact.humanConfirmed?'HUMAN VERIFIED':'DRAFT'}</dd></dl></div><div class="d4-evidence-purpose"><b>분석 목적 / 가설</b><p>${escapeD4Evidence(artifact.objective)||'작성 대기'}</p><small>Source · ${escapeD4Evidence(artifact.sourceEvidence)||'연결 Evidence 대기'}</small></div>${rows.length?renderD4EvidenceVisual(row.id,schema,rows):'<div class="d4-file-only-note">구조화 입력 대신 첨부된 완성 분석자료를 원본 Evidence로 사용합니다.</div>'}${renderD4ReportAttachments(artifact.attachments||[])}<div class="d4-evidence-result"><b>분석 결론</b><p>${escapeD4Evidence(artifact.conclusion)||'분석 결론 작성 대기'}</p></div><footer class="stage-report-foot"><span>작성/확인 · ${escapeD4Evidence(artifact.updatedBy)||'미확인'} ${escapeD4Evidence(artifact.updatedAt)}</span><span>${c.id} · D4-E${String(index+1).padStart(2,'0')}</span></footer></article>`;
+  return `<article class="stage-report-paper d4-evidence-paper"><div class="stage-report-watermark">DRAFT · HUMAN APPROVAL REQUIRED</div><div class="d4-evidence-doc-head"><div><b>RAMOS</b><small>D4 ROOT CAUSE EVIDENCE</small></div><div><span>EVIDENCE ${String(index+1).padStart(2,'0')}</span><h2>${escapeD4Evidence(schema.title)}</h2></div><dl><dt>문서번호</dt><dd>${escapeD4Evidence(artifact.documentNo)}</dd><dt>확인상태</dt><dd class="${artifact.humanConfirmed?'ok':'wait'}">${artifact.humanConfirmed?'HUMAN VERIFIED':'DRAFT'}</dd></dl></div><div class="d4-evidence-purpose"><b>분석 목적 / 가설</b><p>${escapeD4Evidence(artifact.objective)||'작성 대기'}</p><small>Source · ${escapeD4Evidence(artifact.sourceEvidence)||'연결 Evidence 대기'}</small></div>${rows.length?renderD4EvidenceVisual(row.id,schema,rows):'<div class="d4-file-only-note">구조화 입력 대신 첨부된 완성 분석자료를 원본 Evidence로 사용합니다.</div>'}${renderD4ReportAttachments(artifact.attachments||[],c.id)}<div class="d4-evidence-result"><b>분석 결론</b><p>${escapeD4Evidence(artifact.conclusion)||'분석 결론 작성 대기'}</p></div><footer class="stage-report-foot"><span>작성/확인 · ${escapeD4Evidence(artifact.updatedBy)||'미확인'} ${escapeD4Evidence(artifact.updatedAt)}</span><span>${c.id} · D4-E${String(index+1).padStart(2,'0')}</span></footer></article>`;
 }
-function renderD4ReportAttachments(attachments){
+function renderD4ReportAttachments(attachments,caseId){
   if(!attachments.length)return '';
   return `<section class="d4-report-attachments">
     <div class="d4-report-attach-head">
@@ -175,7 +220,7 @@ function renderD4ReportAttachments(attachments){
       </div>
     </div>
     <div class="d4-report-attachments-grid">
-      ${attachments.map((item,idx)=>`<div class="d4-report-attachment d4-attachment-card-${item.previewType||'document'}" data-d4-file-key="${escapeD4Evidence(item.storageKey)}" data-d4-file-name="${escapeD4Evidence(item.name)}" data-d4-preview-type="${escapeD4Evidence(item.previewType)}" data-d4-file-size="${item.size||0}" data-d4-file-uploader="${escapeD4Evidence(item.uploadedBy||'CFT 담당자')}" data-d4-file-date="${escapeD4Evidence(item.uploadedAt||'')}"><div class="d4-attachment-loading"><div class="d4-attach-spinner"></div><b>${escapeD4Evidence(item.name)}</b><span>${formatD4FileSize(item.size||0)} · 원본 분석자료 로딩 중...</span></div></div>`).join('')}
+      ${attachments.map((item,idx)=>`<div class="d4-report-attachment d4-attachment-card-${item.previewType||'document'}" data-d4-file-key="${escapeD4Evidence(item.storageKey)}" data-d4-server-id="${escapeD4Evidence(item.serverFileId)}" data-d4-case-id="${escapeD4Evidence(caseId)}" data-d4-file-name="${escapeD4Evidence(item.name)}" data-d4-preview-type="${escapeD4Evidence(item.previewType)}" data-d4-file-size="${item.size||0}" data-d4-file-uploader="${escapeD4Evidence(item.uploadedBy||'CFT 담당자')}" data-d4-file-date="${escapeD4Evidence(item.uploadedAt||'')}"><div class="d4-attachment-loading"><div class="d4-attach-spinner"></div><b>${escapeD4Evidence(item.name)}</b><span>${formatD4FileSize(item.size||0)} · 원본 분석자료 로딩 중...</span></div></div>`).join('')}
     </div>
   </section>`;
 }
@@ -197,14 +242,14 @@ async function hydrateD4EvidenceAttachments(root=document){
     const uploadDate=node.dataset.d4FileDate||'';
     const ext=((name.split('.').pop()||'FILE')).toLowerCase();
     try{
-      const blob=await getD4EvidenceFile(key);
+      const blob=await loadD4AttachmentBlob(node.dataset.d4CaseId,{serverFileId:node.dataset.d4ServerId,storageKey:key});
       if(!blob){
         node.innerHTML=`<div class="d4-attachment-missing">
           <div class="d4-missing-icon"><i data-lucide="alert-triangle"></i></div>
           <div class="d4-missing-content">
             <b>${escapeD4Evidence(name)}</b>
-            <span>이 PC의 브라우저 Evidence 저장소(IndexedDB)에 원본 파일이 없습니다.</span>
-            <small>※ 다중 PC 자동 동기화는 차기 중앙 파일 저장소 연동 시 제공됩니다. 원본을 등록한 PC에서 확인하거나 다시 첨부해 주십시오.</small>
+            <span>이전 방식으로 첨부된 파일이라 등록한 PC의 브라우저에만 원본이 있습니다.</span>
+            <small>※ 등록한 PC에서 확인하거나, D4 Evidence 작성 창에서 원본을 다시 첨부해 주십시오. 새로 첨부한 파일은 QMS 서버에 보관되어 모든 PC에서 열립니다.</small>
           </div>
         </div>`;
         continue;
@@ -330,7 +375,7 @@ function renderD4VisualGallery(c) {
         </div>
         <span style="font-size:10px; color:var(--text-muted);">첨부 ${attachments.length}건</span>
       </div>
-      ${attachments.length ? renderD4ReportAttachments(attachments) : `
+      ${attachments.length ? renderD4ReportAttachments(attachments, c.id) : `
         <div class="d4-fa-gallery-empty" style="border:1px dashed var(--border); border-radius:6px; padding:24px 16px; text-align:center; background:var(--bg-card-subtle); margin-top:10px;">
           <strong style="font-size:12px; color:var(--text-primary);">첨부된 분석 자료가 없습니다</strong>
           <p style="font-size:10px; color:var(--text-muted); margin:4px auto 0; max-width:480px; line-height:1.4;">

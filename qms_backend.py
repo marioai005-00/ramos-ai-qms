@@ -103,6 +103,7 @@ from internal_quality import InternalQualityMixin
 from supplier_notices import SupplierNoticesMixin
 from supplier_tickets import SupplierSummaryMixin, SupplierTicketsMixin
 from assembly_defects import AssemblyDefectsMixin
+from intake_files import IntakeFilesMixin
 from mailer import MailerMixin
 from report_export import ReportExportMixin
 from stage_drafts import StageDraftMixin
@@ -113,7 +114,7 @@ from prevention_advisor import PreventionAdvisorMixin
 from closure_advisor import ClosureAdvisorMixin
 
 
-class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin, SupplierSummaryMixin, AssemblyDefectsMixin, StageDraftMixin, ToolAdvisorMixin, ActionAdvisorMixin, ValidationAdvisorMixin, PreventionAdvisorMixin, ClosureAdvisorMixin, ReportExportMixin, MailerMixin):
+class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin, SupplierSummaryMixin, AssemblyDefectsMixin, IntakeFilesMixin, StageDraftMixin, ToolAdvisorMixin, ActionAdvisorMixin, ValidationAdvisorMixin, PreventionAdvisorMixin, ClosureAdvisorMixin, ReportExportMixin, MailerMixin):
     """Thread-safe SQLite store used by the local portal server."""
 
     def __init__(self, project_root: Path):
@@ -320,6 +321,7 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
             self._init_supplier_notices(db)
             self._init_supplier_tickets(db)
             self._init_assembly_defects(db)
+            self._init_intake_files(db)
             self._init_mail(db)
             self._seed_users(db)
 
@@ -616,29 +618,41 @@ class QMSStore(InternalQualityMixin, SupplierNoticesMixin, SupplierTicketsMixin,
                         before_hash=previous["state_hash"], after_hash=after_hash, details={"reason": reason.strip()[:500], "revision": revision})
             return {"revision": revision, "updatedAt": now, "stateHash": after_hash, "type": record_type, "id": record_id}
 
-    def upload_case_evidence(self, identity: SessionIdentity, case_id: str, payload: dict) -> dict:
-        self._require_role(identity, {"system_admin", "quality_reviewer", "case_facilitator", "stage_drafter", "stage_leader", "stage_champion", "customer_dispatcher"})
-        name = payload.get("filename")
-        data_url = payload.get("dataUrl")
-        stages = payload.get("linkedStages")
-        evidence_type = payload.get("type")
-        allowed_ext = {"png", "jpg", "jpeg", "webp", "pdf", "xlsx", "xls", "csv", "docx", "eml", "txt"}
+    # D4 analysis attachments arrive as slides, legacy Office files and bitmap captures; the intake picker also offers Outlook .msg.
+    _ORIGINAL_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "gif", "bmp", "pdf", "xlsx", "xls", "csv", "docx", "doc", "pptx", "ppt", "eml", "msg", "txt"}
+    _ORIGINAL_MIME_TYPES = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp", "gif": "image/gif", "bmp": "image/bmp",
+                            "pdf": "application/pdf", "txt": "text/plain", "csv": "text/csv", "eml": "message/rfc822"}
+
+    @classmethod
+    def _original_from_payload(cls, payload: Any) -> tuple[str, bytes, str]:
+        """File name, bytes and MIME type of an uploaded original (Case evidence and intake originals)."""
+        name = payload.get("filename") if isinstance(payload, dict) else None
+        data_url = payload.get("dataUrl") if isinstance(payload, dict) else None
         if (not isinstance(name, str) or not name.strip() or len(name) > 240
-                or any(char in name for char in '/\\\r\n\x00') or name.rsplit(".", 1)[-1].lower() not in allowed_ext
-                or not isinstance(data_url, str) or not data_url.startswith("data:") or ";base64," not in data_url
-                or not isinstance(evidence_type, str) or evidence_type not in {"Customer original", "Measurement", "FA Analysis", "User evidence"}
-                or not isinstance(stages, list) or not stages or len(stages) > 8
-                or any(not isinstance(stage, str) or stage not in {f"D{i}" for i in range(1, 9)} for stage in stages)):
+                or any(char in name for char in '/\\\r\n\x00') or name.rsplit(".", 1)[-1].lower() not in cls._ORIGINAL_EXTENSIONS
+                or not isinstance(data_url, str) or not data_url.startswith("data:") or ";base64," not in data_url):
             raise QMSApiError(400, "지원하는 원본 파일과 증거 유형·연결 단계를 선택하세요.", code="INVALID_EVIDENCE")
         try:
             content = base64.b64decode(data_url.split(";base64,", 1)[1], validate=True)
-            expected_revision = int(payload.get("expectedRevision", -1))
         except (ValueError, binascii.Error) as error:
             raise QMSApiError(400, "파일 내용을 해석하지 못했습니다.", code="INVALID_EVIDENCE") from error
         if not content or len(content) > 30 * 1024 * 1024:
             raise QMSApiError(413, "빈 파일은 등록할 수 없으며 파일당 최대 30 MB입니다.", code="EVIDENCE_SIZE")
-        mime_types = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp", "pdf": "application/pdf", "txt": "text/plain", "csv": "text/csv", "eml": "message/rfc822"}
-        mime = mime_types.get(name.rsplit(".", 1)[-1].lower(), "application/octet-stream")
+        return name, content, cls._ORIGINAL_MIME_TYPES.get(name.rsplit(".", 1)[-1].lower(), "application/octet-stream")
+
+    def upload_case_evidence(self, identity: SessionIdentity, case_id: str, payload: dict) -> dict:
+        self._require_role(identity, {"system_admin", "quality_reviewer", "case_facilitator", "stage_drafter", "stage_leader", "stage_champion", "customer_dispatcher"})
+        stages = payload.get("linkedStages")
+        evidence_type = payload.get("type")
+        if (not isinstance(evidence_type, str) or evidence_type not in {"Customer original", "Measurement", "FA Analysis", "User evidence"}
+                or not isinstance(stages, list) or not stages or len(stages) > 8
+                or any(not isinstance(stage, str) or stage not in {f"D{i}" for i in range(1, 9)} for stage in stages)):
+            raise QMSApiError(400, "지원하는 원본 파일과 증거 유형·연결 단계를 선택하세요.", code="INVALID_EVIDENCE")
+        name, content, mime = self._original_from_payload(payload)
+        try:
+            expected_revision = int(payload.get("expectedRevision", -1))
+        except (TypeError, ValueError) as error:
+            raise QMSApiError(400, "파일 내용을 해석하지 못했습니다.", code="INVALID_EVIDENCE") from error
         evidence_id = "EVD-" + secrets.token_hex(16)
         digest = hashlib.sha256(content).hexdigest()
         now = utc_now()

@@ -611,6 +611,19 @@ class PortalHandler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(item["content"])
             return True
+        intake_file = re.fullmatch(r"/__api__/qms/intake-files/([A-Za-z0-9-]+)", clean_path)
+        if intake_file:
+            item = QMS_STORE.get_intake_file(self._session_identity(), intake_file.group(1))
+            self.send_response(200)
+            self.send_header("Content-Type", item["mime_type"])
+            self.send_header("Content-Length", str(len(item["content"])))
+            self.send_header("Content-Disposition", "attachment; filename*=UTF-8''" + urllib.parse.quote(item["original_name"], safe=""))
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Evidence-SHA256", item["sha256"])
+            self.end_headers()
+            self.wfile.write(item["content"])
+            return True
         if clean_path == "/__api__/qms/supplier-notices":
             identity = self._session_identity()
             self._send_json(200, {"success": True, "items": QMS_STORE.list_supplier_notices(identity)})
@@ -777,18 +790,19 @@ class PortalHandler(SimpleHTTPRequestHandler):
         assembly_update = re.fullmatch(r"/__api__/qms/assembly-defects/([A-Za-z0-9-]+)", clean_path)
         internal_update = re.fullmatch(r"/__api__/qms/internal-quality/([A-Za-z0-9-]+)", clean_path)
         evidence_upload = re.fullmatch(r"/__api__/qms/cases/([^/]+)/evidence", clean_path)
+        intake_carry = re.fullmatch(r"/__api__/qms/cases/([^/]+)/intake-originals", clean_path)
         case_source_action = re.fullmatch(r"/__api__/qms/cases/([^/]+)/sources", clean_path)
         finding_action = re.fullmatch(r"/__api__/qms/quality-findings/(\d+)/resolve", clean_path)
         qms_paths = {
             "/__api__/auth/login", "/__api__/auth/logout", "/__api__/auth/change-password",
-            "/__api__/qms/supplier-notices", "/__api__/qms/supplier-tickets", "/__api__/qms/assembly-defects", "/__api__/qms/internal-quality", "/__api__/qms/state", "/__api__/qms/stage-version", "/__api__/qms/approval",
+            "/__api__/qms/supplier-notices", "/__api__/qms/supplier-tickets", "/__api__/qms/assembly-defects", "/__api__/qms/internal-quality", "/__api__/qms/intake-files", "/__api__/qms/state", "/__api__/qms/stage-version", "/__api__/qms/approval",
             "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/ai/stage-draft", "/__api__/qms/ai/d4-tool-advice", "/__api__/qms/ai/d5-action-advice", "/__api__/qms/ai/d6-test-plan", "/__api__/qms/ai/d6-read-report", "/__api__/qms/d6/statistics", "/__api__/qms/d6/checks", "/__api__/qms/ai/d7-system-advice", "/__api__/qms/ai/d7-deployment-advice", "/__api__/qms/ai/d7-lessons", "/__api__/qms/d7/checks", "/__api__/qms/d8/readiness", "/__api__/qms/d8/monitoring-plan", "/__api__/qms/ai/d8-review", "/__api__/qms/ai/d8-draft", "/__api__/qms/records/delete", "/__api__/qms/mail/test", "/__api__/qms/escalations/evaluate",
             "/__api__/qms/agent-runs", "/__api__/qms/scheduler/evaluate",
         }
-        if clean_path not in qms_paths and not agent_run_action and not case_source_action and not finding_action and not evidence_upload and not internal_update and not notice_update and not ticket_update and not assembly_update:
+        if clean_path not in qms_paths and not agent_run_action and not case_source_action and not finding_action and not evidence_upload and not intake_carry and not internal_update and not notice_update and not ticket_update and not assembly_update:
             return False
         self._validate_local_origin()
-        params = self._read_json_body(44 * 1024 * 1024 if evidence_upload or internal_update or notice_update or ticket_update or assembly_update or clean_path in {"/__api__/qms/internal-quality", "/__api__/qms/supplier-notices", "/__api__/qms/supplier-tickets", "/__api__/qms/assembly-defects"} else 32 * 1024 * 1024)
+        params = self._read_json_body(44 * 1024 * 1024 if evidence_upload or internal_update or notice_update or ticket_update or assembly_update or clean_path in {"/__api__/qms/internal-quality", "/__api__/qms/supplier-notices", "/__api__/qms/supplier-tickets", "/__api__/qms/assembly-defects", "/__api__/qms/intake-files"} else 32 * 1024 * 1024)
         if clean_path == "/__api__/auth/login":
             user, raw_token, csrf = QMS_STORE.authenticate(str(params.get("username", "")), str(params.get("password", "")))
             cookie = f"{AUTH_COOKIE_NAME}={urllib.parse.quote(raw_token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=28800"
@@ -823,6 +837,12 @@ class PortalHandler(SimpleHTTPRequestHandler):
         if evidence_upload:
             result = QMS_STORE.upload_case_evidence(identity, urllib.parse.unquote(evidence_upload.group(1)), params)
             self._send_json(201, {"success": True, **result})
+            return True
+        if clean_path == "/__api__/qms/intake-files":
+            self._send_json(201, {"success": True, "file": QMS_STORE.upload_intake_file(identity, params)})
+            return True
+        if intake_carry:
+            self._send_json(200, {"success": True, **QMS_STORE.carry_intake_originals(identity, urllib.parse.unquote(intake_carry.group(1)), params)})
             return True
         runtime = get_agent_runtime()
         if clean_path == "/__api__/qms/agent-runs":

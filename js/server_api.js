@@ -212,6 +212,29 @@
     return response.blob();
   }
 
+  // An intake has no Case yet, so its originals are stored under the intake number.
+  async function uploadIntakeFile(intakeId, file) {
+    const dataUrl = await fileAsDataURL(file);
+    return (await request('/__api__/qms/intake-files', { method: 'POST', body: { intakeId, filename: file.name, dataUrl } })).file;
+  }
+
+  async function fetchIntakeFile(fileId) {
+    const response = await fetch(`/__api__/qms/intake-files/${encodeURIComponent(fileId)}`, { credentials: 'same-origin', cache: 'no-store' });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `원본 요청 실패 (HTTP ${response.status})`);
+    }
+    return response.blob();
+  }
+
+  // Copies the stored originals of the Case's source intake into the Case evidence.
+  async function carryIntakeOriginals(caseId) {
+    await flushSaves();
+    const result = await request(`/__api__/qms/cases/${encodeURIComponent(caseId)}/intake-originals`, { method: 'POST', body: { expectedRevision: state.centralRevision } });
+    state.centralRevision = result.revision;
+    return result;
+  }
+
   async function createStageVersion(caseId, stageKey, snapshot) {
     return request('/__api__/qms/stage-version', { method: 'POST', body: { caseId, stageKey, snapshot } });
   }
@@ -403,6 +426,9 @@
     flushSaves,
     uploadCaseEvidence,
     fetchCaseEvidence,
+    uploadIntakeFile,
+    fetchIntakeFile,
+    carryIntakeOriginals,
     createStageVersion,
     recordApproval,
     prepareDispatch,

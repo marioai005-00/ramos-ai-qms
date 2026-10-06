@@ -1,5 +1,7 @@
-/* Original intake evidence and document content. Reuses the existing IndexedDB store. */
+/* Original intake evidence and document content. Originals are stored on the central QMS server under the
+   intake number; files kept by older versions in this browser's IndexedDB store stay readable. */
 const INTAKE_MAX_FILE_BYTES = 30 * 1024 * 1024;
+const INTAKE_ORIGINAL_EXTENSIONS = ['pdf','docx','doc','xlsx','xls','csv','pptx','ppt','eml','msg','txt','png','jpg','jpeg','webp','gif','bmp'];
 let intakeRequestVersion = 0;
 let intakeSubmitting = false;
 let intakeExtraction = null;
@@ -47,7 +49,7 @@ async function readIntakeDocument(item) {
   return { status: 'Manual review', text: '', reason: `.${ext} 자동 해석 미지원 — 원본을 직접 확인하세요.` };
 }
 
-async function prepareIntakeEvidence(items) {
+async function prepareIntakeEvidence(items, intakeId) {
   const result = [];
   for (const item of items) {
     if (!item.fileObj) {
@@ -61,19 +63,9 @@ async function prepareIntakeEvidence(items) {
       });
       continue;
     }
-    item.storageKey = item.storageKey || `intake__${item.id || intakeFileId()}`;
-    if (typeof putD4EvidenceFile === 'function') {
-      await putD4EvidenceFile(item.storageKey, item.fileObj);
-    }
-    let hash = null;
-    try {
-      const bytes = await item.fileObj.arrayBuffer();
-      if (globalThis.crypto?.subtle) {
-        hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('');
-      }
-    } catch (e) {
-      console.warn('Hash computation failed:', e);
-    }
+    // The server stores the bytes and returns the size and SHA-256 it computed; a failed upload stops the intake.
+    // A retry reuses what is already stored for the same intake number.
+    if (item.central?.intakeId !== intakeId) item.central = await QMSApi.uploadIntakeFile(intakeId, item.fileObj);
     result.push({
       id: `INT-EVD-${item.id || intakeFileId()}`,
       title: `[고객 접수 원본] ${item.name}`,
@@ -81,41 +73,80 @@ async function prepareIntakeEvidence(items) {
       type: 'Customer original',
       sourceType: typeof getIntakeSourceType === 'function' ? getIntakeSourceType() : 'Customer Portal',
       linkedStages: ['D2', 'D3'],
-      storageKey: item.storageKey,
-      mimeType: item.fileObj.type,
-      sizeBytes: item.fileObj.size,
-      sha256: hash,
-      uploadedBy: (typeof CURRENT_USER !== 'undefined' && CURRENT_USER?.email) ? CURRENT_USER.email : 'portal',
-      uploadedAt: new Date().toISOString(),
+      storageLocation: 'QMS',
+      intakeFileId: item.central.intakeFileId,
+      mimeType: item.central.mimeType,
+      sizeBytes: item.central.sizeBytes,
+      sha256: item.central.sha256,
+      uploadedBy: item.central.uploadedBy,
+      uploadedAt: item.central.uploadedAt,
       parsingStatus: item.document?.status || 'Extracted'
     });
   }
   return result;
 }
 
+function saveIntakeOriginal(blob, name) {
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.href = url;
+  link.download = name || 'evidence';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function openIntakeOriginal(fileId) {
+  try {
+    const entry = (appData.intakeQueue || []).flatMap(item => item.evidenceList || []).find(item => item.intakeFileId === fileId);
+    saveIntakeOriginal(await QMSApi.fetchIntakeFile(fileId), entry?.file);
+  } catch (error) {
+    alert(`원본 열람 실패: ${error.message}`);
+  }
+}
+
+/* Files attached by older versions exist only in the browser that registered them. */
 async function openStoredEvidence(storageKey) {
   try {
     if (typeof getD4EvidenceFile !== 'function') throw new Error('파일 저장소가 준비되지 않았습니다.');
     const file = await getD4EvidenceFile(storageKey);
-    if (!file) throw new Error('이 브라우저 저장소에 원본 파일이 없습니다.');
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(file);
-    link.href = url;
-    link.download = file.name || 'evidence';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    if (!file) throw new Error('이전 방식으로 등록된 원본이라 등록한 PC의 브라우저에서만 열립니다.');
+    saveIntakeOriginal(file, file.name);
   } catch (error) {
     alert(`원본 열람 실패: ${error.message}`);
   }
 }
 
 function intakeEvidenceLinks(items) {
+  const note = text => `<span style="font-size:0.72rem; color:#94a3b8;">${text}</span>`;
+  const button = call => `<button type="button" class="btn btn-secondary btn-sm" onclick="${call}" style="font-size:0.72rem; padding:2px 8px;">원본 다운로드</button>`;
   return (items || []).map(item => `
     <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
       <span>${typeof escapeWorkspaceValue === 'function' ? escapeWorkspaceValue(item.file) : item.file}</span>
-      ${item.storageKey ? `<button type="button" class="btn btn-secondary btn-sm" onclick="openStoredEvidence('${item.storageKey}')" style="font-size:0.72rem; padding:2px 8px;">원본 다운로드</button>` : `<span style="font-size:0.72rem; color:#94a3b8;">(원본 미보관)</span>`}
+      ${/^[A-Za-z0-9-]+$/.test(item.intakeFileId || '') ? `${button(`openIntakeOriginal('${item.intakeFileId}')`)}${note('QMS 원본 보관')}`
+        : item.storageKey ? `${button(`openStoredEvidence('${item.storageKey}')`)}${note('이전 방식 · 등록한 PC 브라우저에만 보관')}`
+        : note('(원본 미보관)')}
     </div>
   `).join('');
+}
+
+/* Intake originals the server holds that this Case does not have yet. The server copies them; the browser
+   never writes those evidence entries itself. */
+function pendingIntakeOriginals(c) {
+  const intake = (appData.intakeQueue || []).find(item => item.intakeId === c?.sourceIntakeId);
+  const carried = new Set((c?.evidenceList || []).map(item => item.intakeFileId).filter(Boolean));
+  return (intake?.evidenceList || []).filter(item => item.intakeFileId && !carried.has(item.intakeFileId));
+}
+
+async function carryIntakeOriginalsToCase(c) {
+  if (!pendingIntakeOriginals(c).length) return { carried: [], missing: [] };
+  const result = await QMSApi.carryIntakeOriginals(c.id);
+  if (result.carried.length) {
+    // Originals, Evidence entries (D2·D3) and revision are committed together by the server.
+    Object.assign(c, result.case);
+    saveAppData();
+    await QMSApi.flushSaves();
+  }
+  return result;
 }

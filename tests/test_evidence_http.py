@@ -112,6 +112,24 @@ class EvidenceHttpTests(unittest.TestCase):
         self.assertEqual(self.upload(self.payload(b""))[0], 413)
         self.assertEqual(self.counts(), (0, 0))
 
+    def test_d4_analysis_attachment_leaves_earlier_stage_approvals(self):
+        content = b"analysis deck bytes for tests"
+        status, _, result = self.upload(self.payload(content, filename="분석 자료 테스트.pptx", type="FA Analysis", linkedStages=["D4"], sourceNote="D4 분석 양식 첨부"))
+        self.assertEqual(status, 201)
+        evidence = result["evidence"]
+        self.assertEqual((evidence["linkedStages"], evidence["stageScoped"], evidence["source"]), (["D4"], True, "D4 분석 양식 첨부"))
+        case = result["case"]
+        self.assertEqual(case["signOffHistory"]["D1"]["status"], "Approved")
+        self.assertEqual(case["signOffHistory"]["D2"]["status"], "Approved")
+        self.assertEqual(case["d2"]["approval"], {"status": "Approved", "humanConfirmed": True})
+        self.assertEqual(case["gates"]["gate3D"]["status"], "Approved")
+        self.assertNotIn("approvalAudit", case)
+        status, headers, actual = self.request("GET", f"/__api__/qms/cases/CASE-TEST/evidence/{evidence['id']}/file", headers=self.login("hskim"))
+        self.assertEqual((status, actual, headers["X-Evidence-SHA256"]), (200, content, hashlib.sha256(content).hexdigest()))
+        for name in ("capture.gif", "capture.bmp", "report.doc", "slides.ppt"):
+            with self.subTest(name=name):
+                self.assertEqual(self.upload(self.payload(filename=name, type="User evidence", linkedStages=["D4"], expectedRevision=self.store.get_state()["revision"]))[0], 201)
+
     def test_shared_original_survives_store_reopen(self):
         status, _, result = self.upload()
         portal_server.QMS_STORE = QMSStore(Path(self.temp.name))

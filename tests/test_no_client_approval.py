@@ -46,5 +46,19 @@ class NoClientSideApprovalTests(unittest.TestCase):
         self.assertNotIn("status: 'Completed'", bridge)
         self.assertNotIn("selected: true", bridge)
 
+    def test_originals_go_to_the_central_store_not_browser_storage(self):
+        # The browser file store of older versions is read-only: nothing writes to it or deletes from it.
+        for path, text in self.sources().items():
+            if "vendor" in path.parts:
+                continue
+            with self.subTest(path=path.name):
+                self.assertIsNone(re.search(r"putD4EvidenceFile|deleteD4EvidenceFile|'readwrite'", text))
+        js = PROJECT_ROOT / "js"
+        self.assertIn("QMSApi.uploadIntakeFile(", (js / "intake_documents.js").read_text(encoding="utf-8"))
+        self.assertIn("QMSApi.uploadCaseEvidence(", (js / "views" / "d4_evidence.js").read_text(encoding="utf-8"))
+        # Central intake originals reach a Case through the server copy, never as browser-written evidence entries.
+        self.assertIn("filter(evidence => !evidence.intakeFileId)", (js / "views" / "intake.js").read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -960,7 +960,10 @@
       lucide.createIcons();
     }
 
-    function submitIntakeTriageDecision(intakeId, decision) {
+    let intakeTriageSubmitting = false;
+
+    async function submitIntakeTriageDecision(intakeId, decision) {
+      if (intakeTriageSubmitting) return;
       if (!canReviewIntakeQueue()) {
         alert('품질 검토 권한이 없습니다.');
         return;
@@ -1005,7 +1008,22 @@
         item.triage.approvedCaseId = caseId;
         saveAppData();
         renderCaseSelector();
-        alert(`품질 검토가 승인되어 정식 Case [${caseId}]가 생성되었습니다.\n\n다음 단계는 D1 CFT 구성입니다.`);
+        // The Case exists now, so the server can copy the intake originals it holds into the Case evidence.
+        intakeTriageSubmitting = true;
+        form.querySelectorAll('button').forEach(button => { button.disabled = true; });
+        let originals = '';
+        try {
+          const result = await carryIntakeOriginalsToCase(appData.cases.find(c => c.id === caseId));
+          if (result.carried.length) originals += `\n접수 원본 ${result.carried.length}건을 Case Evidence(D2·D3)로 옮겼습니다.`;
+          if (result.missing.length) originals += `\n서버에 원본이 없는 ${result.missing.length}건은 옮기지 않았습니다: ${result.missing.map(entry => entry.file).join(', ')}`;
+        } catch (error) {
+          originals = `\n접수 원본을 Case로 옮기지 못했습니다 (${error.message}). D2 근거 자료의 [접수 원본 가져오기]로 다시 시도해 주세요.`;
+        } finally {
+          intakeTriageSubmitting = false;
+        }
+        const browserOnly = (item.evidenceList || []).filter(entry => entry.storageKey && !entry.intakeFileId).length;
+        if (browserOnly) originals += `\n이전 방식으로 등록된 원본 ${browserOnly}건은 등록한 PC의 브라우저에만 있습니다. 필요하면 D2에서 원본을 다시 첨부해 주세요.`;
+        alert(`품질 검토가 승인되어 정식 Case [${caseId}]가 생성되었습니다.${originals}\n\n다음 단계는 D1 CFT 구성입니다.`);
         switchStage('D1');
         return;
       }
@@ -1068,7 +1086,8 @@
         d6: { validationTests: [] },
         d7: { systemUpdates: [], horizontalDeployment: [] },
         d8: { checklist: [], approvalFlow: [] },
-        evidenceList: (item.evidenceList || []).map(evidence => ({ ...evidence, linkedStages: ['D2', 'D3'] }))
+        // Originals stored on the server are added by carryIntakeOriginalsToCase from the stored bytes, not from this list.
+        evidenceList: (item.evidenceList || []).filter(evidence => !evidence.intakeFileId).map(evidence => ({ ...evidence, linkedStages: ['D2', 'D3'] }))
       };
       appData.cases.unshift(caseObj);
       appData.activeCaseId = caseId;
@@ -1137,6 +1156,9 @@
     async function processIncomingFiles(files) {
       if(intakeSubmitting)return;
       for(const file of [...files]){
+        // Originals are stored on the QMS server, which accepts these formats only.
+        if(!INTAKE_ORIGINAL_EXTENSIONS.includes((file.name.split('.').pop()||'').toLowerCase())){alert(`${file.name}: QMS에 보관할 수 없는 형식입니다. PDF·Word·Excel·PowerPoint·CSV·EML·MSG·TXT·이미지 파일을 첨부해 주세요.`);continue;}
+        if(!file.size){alert(`${file.name}: 빈 파일은 첨부할 수 없습니다.`);continue;}
         if(file.size>INTAKE_MAX_FILE_BYTES){alert(`${file.name}: 파일당 30MB를 초과했습니다.`);continue;}
         intakeFiles.push({id:intakeFileId(),name:file.name,size:(file.size/1024).toFixed(1)+' KB',fileObj:file});
       }
@@ -1414,9 +1436,10 @@
       intakeSubmitting=true;
       const submitButton=form.querySelector('[type="submit"]');if(submitButton)submitButton.disabled=true;
       try {
-        intakeRequest.evidenceList=await prepareIntakeEvidence(selectedFiles);
+        // Originals are stored on the QMS server first; the intake is registered only when every file is there.
+        intakeRequest.evidenceList=await prepareIntakeEvidence(selectedFiles, intakeId);
         queue.unshift(intakeRequest);
-        try { saveAppData(); } catch(error) { queue.splice(queue.indexOf(intakeRequest),1); await cleanupPreparedIntakeEvidence(intakeRequest.evidenceList); throw error; }
+        try { saveAppData(); } catch(error) { queue.splice(queue.indexOf(intakeRequest),1); throw error; }
         intakeFiles=[];
         intakeExtraction=null;
         clearIntakeDraft();
@@ -1428,7 +1451,7 @@
         if(submitButton)submitButton.disabled=false;
       }
 
-      alert(`접수번호 [${intakeId}]가 품질 검토 대기함에 등록되었습니다.\n\n접수자: ${intakeRegistrar.name} (${intakeRegistrar.dept})\n고객 대응: ${intakeOwner.name} (${intakeOwner.dept})\n품질 검토: ${QUALITY_INTAKE_COORDINATOR.name} (${QUALITY_INTAKE_COORDINATOR.dept})\n\n아직 정식 8D Case와 D1 CFT는 생성되지 않았습니다.`);
+      alert(`접수번호 [${intakeId}]가 품질 검토 대기함에 등록되었습니다.\n\n접수자: ${intakeRegistrar.name} (${intakeRegistrar.dept})\n고객 대응: ${intakeOwner.name} (${intakeOwner.dept})\n품질 검토: ${QUALITY_INTAKE_COORDINATOR.name} (${QUALITY_INTAKE_COORDINATOR.dept})${intakeRequest.evidenceList.some(item=>item.intakeFileId)?`\n첨부 원본 ${intakeRequest.evidenceList.filter(item=>item.intakeFileId).length}건은 QMS 서버에 보관되어 품질 검토자가 다른 PC에서도 열 수 있습니다.`:''}\n\n아직 정식 8D Case와 D1 CFT는 생성되지 않았습니다.`);
       switchNav(hasMasterAuthority(CURRENT_USER) ? 'intake-triage' : 'dashboard');
     }
 

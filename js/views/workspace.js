@@ -734,7 +734,7 @@
       let attachmentChars = 0;
       for (const evidence of context.evidence.slice(0, 10)) {
         const name = evidence.file || evidence.title || evidence.id || 'Evidence';
-        if ((!evidence.serverFileId && !evidence.storageKey) || typeof readIntakeDocument !== 'function') {
+        if ((!evidence.serverFileId && !evidence.intakeFileId && !evidence.storageKey) || typeof readIntakeDocument !== 'function') {
           skippedNames.push(name);
           continue;
         }

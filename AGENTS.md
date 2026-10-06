@@ -94,6 +94,13 @@
 - 전파 대상은 Case 팀 부서와 공식 외주사 중에서만 고른다. 실제 메일은 보내지 않는다.
 - 상세는 docs/D7_PREVENTION_ASSISTANT_20261003.md.
 
+## 원본 파일 보관 (2026-10-06)
+
+- 원본 파일은 QMS 서버에 보관한다. 브라우저 IndexedDB에 새로 쓰는 코드를 다시 넣지 않는다. 기존 IndexedDB 파일은 읽기만 하고 지우거나 자동 이전하지 않는다.
+- 접수 원본은 intake_files.py에 접수번호로 저장하고, Case 생성 시 서버가 실제 보관된 파일만 Case Evidence(D2·D3)로 복사한다. 브라우저가 그 Evidence 항목을 직접 만들지 않는다.
+- D4 분석 첨부는 QMSApi.uploadCaseEvidence로 D4에만 연결한다. 첨부로 생기는 Evidence는 stageScoped로 두어 다른 단계 결재를 건드리지 않는다.
+- 상세는 docs/CENTRAL_ORIGINALS_20261006.md.
+
 ## 종결 조건 — 사용자 결정 2026-10-03
 
 - Case 종결은 간사 기안 → 리더 → 챔피언의 D8(8D Report) 결재로 끝난다. 고객 송부·고객 수락을 종결 조건으로 다시 넣지 않는다.
