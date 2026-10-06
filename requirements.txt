@@ -1,1 +1,4 @@
 # RAMOS AI-QMS 8D: the server uses the Python standard library only (Python 3.12+).
+# One exception: the 8D report agent writes its report on the company slide format with python-pptx.
+# Without it the server still runs; only the agent's last step (the .pptx file) fails with a clear message.
+python-pptx>=1.0

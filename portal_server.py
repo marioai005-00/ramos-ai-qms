@@ -28,6 +28,7 @@ import urllib.error
 import urllib.parse
 
 from agent_runtime import AgentRuntime
+from report_agent import ReportAgent
 from qms_backend import QMSApiError, QMSStore
 import action_advisor
 import validation_advisor
@@ -53,6 +54,16 @@ AGENT_RUNTIME = AgentRuntime(QMS_STORE)
 def agent_runtime_is_enabled() -> bool:
     return os.environ.get("QMS_AGENT_RUNTIME_ENABLED", "true").lower() in {"1", "true", "yes", "on"}
 
+
+
+REPORT_AGENT: ReportAgent | None = None
+
+
+def get_report_agent() -> ReportAgent:
+    global REPORT_AGENT
+    if REPORT_AGENT is None or REPORT_AGENT.store is not QMS_STORE:
+        REPORT_AGENT = ReportAgent(QMS_STORE, ask_ai_for_advice)
+    return REPORT_AGENT
 
 
 def get_agent_runtime() -> AgentRuntime:
@@ -745,6 +756,24 @@ class PortalHandler(SimpleHTTPRequestHandler):
             limit = int((query.get("limit") or ["5"])[0])
             self._send_json(200, {"success": True, "matches": QMS_STORE.similar_cases(identity, case_id, limit)})
             return True
+        if clean_path == "/__api__/qms/report-agent/runs":
+            self._send_json(200, {"success": True, "items": get_report_agent().list(self._session_identity())})
+            return True
+        report_run = re.fullmatch(r"/__api__/qms/report-agent/runs/(\d+)(/file)?", clean_path)
+        if report_run and not report_run.group(2):
+            self._send_json(200, {"success": True, "run": get_report_agent().get(self._session_identity(), int(report_run.group(1)))})
+            return True
+        if report_run:
+            item = get_report_agent().file(self._session_identity(), int(report_run.group(1)))
+            self.send_response(200)
+            self.send_header("Content-Type", "application/vnd.openxmlformats-officedocument.presentationml.presentation")
+            self.send_header("Content-Length", str(len(item["content"])))
+            self.send_header("Content-Disposition", "attachment; filename*=UTF-8''" + urllib.parse.quote(item["filename"], safe=""))
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(item["content"])
+            return True
         runtime = get_agent_runtime()
         if clean_path == "/__api__/qms/agent-runs":
             identity = self._session_identity()
@@ -797,7 +826,7 @@ class PortalHandler(SimpleHTTPRequestHandler):
             "/__api__/auth/login", "/__api__/auth/logout", "/__api__/auth/change-password",
             "/__api__/qms/supplier-notices", "/__api__/qms/supplier-tickets", "/__api__/qms/assembly-defects", "/__api__/qms/internal-quality", "/__api__/qms/intake-files", "/__api__/qms/state", "/__api__/qms/stage-version", "/__api__/qms/approval",
             "/__api__/qms/dispatch/prepare", "/__api__/qms/ai/d1-d3-draft", "/__api__/qms/ai/stage-draft", "/__api__/qms/ai/d4-tool-advice", "/__api__/qms/ai/d5-action-advice", "/__api__/qms/ai/d6-test-plan", "/__api__/qms/ai/d6-read-report", "/__api__/qms/d6/statistics", "/__api__/qms/d6/checks", "/__api__/qms/ai/d7-system-advice", "/__api__/qms/ai/d7-deployment-advice", "/__api__/qms/ai/d7-lessons", "/__api__/qms/d7/checks", "/__api__/qms/d8/readiness", "/__api__/qms/d8/monitoring-plan", "/__api__/qms/ai/d8-review", "/__api__/qms/ai/d8-draft", "/__api__/qms/records/delete", "/__api__/qms/mail/test", "/__api__/qms/escalations/evaluate",
-            "/__api__/qms/agent-runs", "/__api__/qms/scheduler/evaluate",
+            "/__api__/qms/agent-runs", "/__api__/qms/scheduler/evaluate", "/__api__/qms/report-agent/runs",
         }
         if clean_path not in qms_paths and not agent_run_action and not case_source_action and not finding_action and not evidence_upload and not intake_carry and not internal_update and not notice_update and not ticket_update and not assembly_update:
             return False
@@ -843,6 +872,9 @@ class PortalHandler(SimpleHTTPRequestHandler):
             return True
         if intake_carry:
             self._send_json(200, {"success": True, **QMS_STORE.carry_intake_originals(identity, urllib.parse.unquote(intake_carry.group(1)), params)})
+            return True
+        if clean_path == "/__api__/qms/report-agent/runs":
+            self._send_json(201, {"success": True, "run": get_report_agent().start(identity, params)})
             return True
         runtime = get_agent_runtime()
         if clean_path == "/__api__/qms/agent-runs":

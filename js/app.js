@@ -657,6 +657,9 @@ function renderCurrentView() {
     case 'mission-control':
       viewHtml = c && window.ramosAgent && typeof window.ramosAgent.renderMissionControlView === 'function' ? window.ramosAgent.renderMissionControlView(c) : renderNoActiveCaseView('자율 8D AI 미션 컨트롤');
       break;
+    case 'report-agent':
+      viewHtml = typeof renderReportAgentView === 'function' ? renderReportAgentView() : renderNoActiveCaseView('8D 보고서 에이전트');
+      break;
     case 'agent-operations':
       viewHtml = typeof renderAgentOperationsView === 'function' ? renderAgentOperationsView() : renderNoActiveCaseView('Agent Operations');
       break;

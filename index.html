@@ -15,6 +15,7 @@
   <!-- Modular Portal Stylesheet -->
   <link rel="stylesheet" href="css/styles.css?v=20261006_logo_v1">
   <link rel="stylesheet" href="css/agent_operations.css?v=20261002_readability_v1">
+  <link rel="stylesheet" href="css/report_agent.css?v=20261006_report_agent_v1">
   <link rel="stylesheet" href="css/ui_readability.css?v=20261002_header_v1">
   <link rel="stylesheet" href="css/case_evidence.css?v=20261002_evidence_v1">
   <link rel="stylesheet" href="css/ui_consistency.css?v=20261002_uniform_v2">
@@ -152,6 +153,11 @@
       <a class="nav-item active" id="navItemDashboard" onclick="switchNav('dashboard', this)">
         <i data-lucide="layout-dashboard" style="width: 16px; height: 16px;"></i>
         <span>종합 관제탑 (Dashboard)</span>
+      </a>
+      <a class="nav-item" id="nav-report-agent" onclick="switchNav('report-agent', this)">
+        <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
+        <span>8D 보고서 에이전트</span>
+        <span class="nav-auto-badge">AGENT</span>
       </a>
       <a class="nav-item" id="nav-mission-control" onclick="switchNav('mission-control', this)">
         <i data-lucide="bot" style="width: 16px; height: 16px;"></i>
@@ -458,6 +464,7 @@
   <script src="js/server_api.js?v=20261006_central_files_v1"></script>
   <script src="js/ui_components.js?v=20261004_localtime_v1"></script>
   <script src="js/views/agent_operations.js?v=20261002_mail_v1"></script>
+  <script src="js/views/report_agent.js?v=20261006_report_agent_v1"></script>
   <script src="js/views/similar_cases.js?v=20260916_v1"></script>
   <script src="js/intake_documents.js?v=20261006_central_files_v1"></script>
   <script src="js/case_evidence.js?v=20261006_central_files_v1"></script>
@@ -489,6 +496,6 @@
   <script src="js/views/supplier_dashboard.js?v=20261002_features_v1"></script>
   <script src="js/views/internal_quality.js?v=20261002_internal_v2"></script>
   <script src="js/ui_readability.js?v=20261002_uniform_v2"></script>
-  <script src="js/app.js?v=20261002_delete_v1"></script>
+  <script src="js/app.js?v=20261006_report_agent_v1"></script>
 </body>
 </html>

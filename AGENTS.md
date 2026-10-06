@@ -96,6 +96,15 @@
 - 전파 대상은 Case 팀 부서와 공식 외주사 중에서만 고른다. 실제 메일은 보내지 않는다.
 - 상세는 docs/D7_PREVENTION_ASSISTANT_20261003.md.
 
+## 8D 보고서 에이전트 (2026-10-06)
+
+경진대회 요건 "AI Agent 형태로 완성할 것"에 맞춘 기능. 사용자 결정: 에이전트의 일은 8D 보고서 작성, 결과물은 사내 발표 양식 PPT.
+
+- 흐름: 요청 한 문장 → 의도 분석(어느 Case인지) → 계획 수립(쓸 도구) → 스스로 수집(Case 기록, 보관된 근거 원본, 유사 과거 Case) → 처리(공식 계산) → 판단(규칙 점검, AI 일관성 검토) → 결과 생성(AI 요약 초안, PPT).
+- 코드: `report_agent.py`(에이전트, 표준 라이브러리만), `report_slides.py`(python-pptx로 `assets/report_template.pptx`에 그림), 화면 `js/views/report_agent.js`·`css/report_agent.css`, 경로 `/__api__/qms/report-agent/runs`(POST 시작, GET 목록·단건, `/{id}/file` 내려받기). 실행 기록과 만든 파일은 `report_agent_runs` 표에 남는다.
+- 지킬 것: 에이전트는 읽기만 한다. Case를 고치거나 값·판정·결재를 만들지 않고 아무 데도 보내지 않는다. 숫자는 기록과 공식에서만 나오고, AI가 쓴 요약 문장은 'AI 초안'으로 표시하며 기록에 없는 숫자가 든 문장은 버린다. 어느 Case인지 가릴 수 없으면 짐작하지 않고 되묻는다. 외부 AI가 응답하지 않으면 규칙으로 해석하고 요약 없이 보고서를 만든다.
+- 도구를 더할 때는 `report_agent.TOOLS`에 한 줄, `_run`의 `work`에 함수 하나를 넣는다. 항상 실행할 도구는 네 번째 값을 True로 둔다.
+
 ## 원본 파일 보관 (2026-10-06)
 
 - 원본 파일은 QMS 서버에 보관한다. 브라우저 IndexedDB에 새로 쓰는 코드를 다시 넣지 않는다. 기존 IndexedDB 파일은 읽기만 하고 지우거나 자동 이전하지 않는다.

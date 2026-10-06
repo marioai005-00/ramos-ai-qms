@@ -62,8 +62,9 @@ def _approved_at(case: dict, stage: str) -> datetime | None:
 
 
 def _span(delta: timedelta) -> str:
-    hours = int(abs(delta).total_seconds() // 3600)
-    return f"{hours // 24}일 {hours % 24}시간" if hours >= 24 else f"{hours}시간"
+    minutes = int(abs(delta).total_seconds() // 60)
+    hours = minutes // 60
+    return f"{hours // 24}일 {hours % 24}시간" if hours >= 24 else (f"{hours}시간" if hours else f"{minutes}분")
 
 
 def lead_times(case: dict) -> list[dict]:
