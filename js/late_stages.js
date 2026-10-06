@@ -40,7 +40,7 @@ function renderLateStageWorkspace(c,stage){
   ${Object.entries(spec.groups).map(([group,g])=>`<div class="card"><h3>${g.label}</h3>${d[group].map((r,i)=>`<div class="card"><div class="grid-3">${Object.entries(g.fields).map(([k,f])=>lateField(`${group}.${i}.${k}`,f,r[k])).join('')}</div><button type="button" class="btn btn-secondary btn-sm" onclick="editLateRow('${stage}','${group}',${i})">행 삭제</button></div>`).join('')}<button type="button" class="btn btn-secondary" onclick="editLateRow('${stage}','${group}')">행 추가</button></div>`).join('')}
  ${Object.entries(spec.objects).map(([obj,fields])=>`<div class="card"><div class="grid-3">${Object.entries(fields).map(([k,f])=>lateField(`${obj}.${k}`,f,d[obj][k])).join('')}</div></div>`).join('')}
  ${Object.entries(spec.scalars||{}).map(([k,f])=>lateField(k,f,d[k])).join('')}
- <div class="card"><label><input id="lateHumanConfirmed" type="checkbox" ${d.approval?.humanConfirmed?'checked':''}> 입력 내용과 원본 증거를 검토했습니다</label><p>${esc(lateStageReviewError(c,stage)||'내용 점검 완료 — 기존 단계 결재를 진행하세요.')}</p></div>
+ <div class="card"><label><input id="lateHumanConfirmed" type="checkbox" ${d.approval?.humanConfirmed?'checked':''}> 입력 내용과 원본 증거를 검토했습니다</label><p>${esc(lateStageReviewError(c,stage)||'내용 점검 완료 — 아래 버튼으로 결재 검토서를 여세요.')}</p><div class="quality-stage-actions"><button type="button" class="btn btn-primary" onclick="openLateStageReview('${stage}')">${stage} 결재 검토서 열기</button></div></div>
  ${d.aiDraft?renderStageDraftPanel(stage,d.aiDraft,`applyLateStageAI('${stage}')`,`discardStageDraft('${stage}')`):''}</form>`;
 }
 function captureLateStageForm(c,stage){
@@ -50,6 +50,13 @@ function captureLateStageForm(c,stage){
  d.approval={...d.approval,humanConfirmed:document.getElementById('lateHumanConfirmed').checked};
 }
 function saveLateStage(notify=true){const c=getActiveCase(),form=document.getElementById('lateStageForm');if(!c||!form)return false;try{captureLateStageForm(c,form.dataset.stage);saveAppData();const check=document.getElementById('lateHumanConfirmed');if(check)check.checked=!!c[form.dataset.stage.toLowerCase()].approval?.humanConfirmed;if(notify)alert('저장했습니다.');return true;}catch(e){alert(`저장 실패: ${e.message}`);return false;}}
+// Opens the same review-and-sign modal D1~D4 use, after saving and checking what the stage still lacks.
+async function openLateStageReview(stage){
+ const c=getActiveCase();if(!c||!saveLateStage(false))return;
+ const error=lateStageReviewError(c,stage);if(error){alert(error);return;}
+ if(!c[stage.toLowerCase()].approval?.humanConfirmed){alert('[입력 내용과 원본 증거를 검토했습니다]에 체크해 주세요.');return;}
+ try{await QMSApi.flushSaves();openStageReviewModal(stage);}catch(e){alert(`${stage} 검토 자료를 저장하지 못했습니다: ${e.message}`);}
+}
 function editLateRow(stage,group,index){if(!saveLateStage(false))return;const c=getActiveCase(),d=c[stage.toLowerCase()];if(index===undefined){const row={};if(group!=='checklist')row.id=`${stage}-${intakeFileId()}`;d[group].push(row);}else d[group].splice(index,1);d.approval={status:'Draft',humanConfirmed:false};saveAppData();renderCurrentView();}
 function lateStageReviewError(c,stage){
  const d=c[stage.toLowerCase()]||{},text=v=>typeof v==='string'&&v.trim(),selected=c.d5?.candidates?.filter(r=>r.selected)||[],linked=id=>selected.some(r=>r.id===id),validCount=v=>v!==''&&v!=null&&Number.isInteger(Number(v))&&Number(v)>=0;
